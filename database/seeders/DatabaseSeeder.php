@@ -19,5 +19,12 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'email' => 'test@example.com',
         ]);
+        
+        // Запускаємо наші сідери для курсів, розділів та уроків
+        $this->call([
+            CourseSeeder::class,
+            UnitSeeder::class,
+            LessonSeeder::class,
+        ]);
     }
 }
