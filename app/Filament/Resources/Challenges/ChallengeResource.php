@@ -37,7 +37,7 @@ class ChallengeResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            RelationManagers\ChallengeOptionsRelationManager::class,
         ];
     }
 
