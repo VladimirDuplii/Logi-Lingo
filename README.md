@@ -25,6 +25,7 @@ LogicLingo is an interactive web application for language learning, inspired by 
 - **Frontend**: React with Inertia.js
 - **Styling**: Tailwind CSS
 - **Authentication**: Laravel Breeze
+- **Admin Panel**: Filament
 - **Database**: MySQL
 - **Containerization**: Docker
 
@@ -44,6 +45,17 @@ The project follows standard Laravel architecture with some additional component
 - **UserProgress**: Overall user progress, including hearts and points
 - **UserSubscription**: Premium subscription details
 
+### Admin Panel
+
+LogicLingo includes a powerful admin panel built with Filament that allows administrators to:
+
+- Manage courses, units, lessons, and challenges
+- Create and edit multiple-choice options for challenges
+- Upload media files for challenges including images and audio
+- Sort and organize content with intuitive interfaces
+- Control the order of lessons and challenges
+- Monitor user progress and subscriptions
+
 ## Setup and Installation
 
 1. Clone this repository
@@ -60,11 +72,16 @@ The project follows standard Laravel architecture with some additional component
    ```bash
    php artisan migrate
    ```
-5. Start development server:
+5. Set up admin user:
+   ```bash
+   php artisan make:filament-user
+   ```
+6. Start development server:
    ```bash
    php artisan serve
    npm run dev
    ```
+7. Access the admin panel at `/admin`
 
 ## License
 
