@@ -7,7 +7,8 @@ const apiClient = axios.create({
         'Accept': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
     },
-    withCredentials: true,
+    // For bearer token auth we don't need cookies
+    withCredentials: false,
 });
 
 export const setupCsrf = async () => {
@@ -21,9 +22,46 @@ export const setupCsrf = async () => {
 export const setAuthToken = (token) => {
     if (token) {
         localStorage.setItem('auth_token', token);
+        apiClient.defaults.headers.Authorization = `Bearer ${token}`;
     } else {
         localStorage.removeItem('auth_token');
+        delete apiClient.defaults.headers.Authorization;
     }
 };
+
+// Rehydrate token on app load
+const existingToken = (typeof window !== 'undefined') ? localStorage.getItem('auth_token') : null;
+if (existingToken) {
+    apiClient.defaults.headers.Authorization = `Bearer ${existingToken}`;
+}
+
+// Attach token on each request (in case it changes during session)
+apiClient.interceptors.request.use(
+    (config) => {
+        const token = (typeof window !== 'undefined') ? localStorage.getItem('auth_token') : null;
+        if (token) {
+            config.headers = config.headers || {};
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => Promise.reject(error)
+);
+
+// Handle 401s globally: drop token; optional redirect can be added
+apiClient.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error?.response?.status === 401) {
+            try {
+                localStorage.removeItem('auth_token');
+                delete apiClient.defaults.headers.Authorization;
+            } catch (e) {
+                // noop
+            }
+        }
+        return Promise.reject(error);
+    }
+);
 
 export default apiClient;
