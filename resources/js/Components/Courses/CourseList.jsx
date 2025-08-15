@@ -10,7 +10,7 @@ const CourseList = ({ onCourseSelect }) => {
     useEffect(() => {
         const fetchCourses = async () => {
             try {
-                const response = await CourseService.getAllCourses();
+                const response = await CourseService.getCourses();
                 setCourses(response.data.data || []);
             } catch (err) {
                 setError('Failed to load courses. Please try again later.');
@@ -40,9 +40,9 @@ const CourseList = ({ onCourseSelect }) => {
             <h2>Available Courses</h2>
             <div className="course-grid">
                 {courses.map(course => (
-                    <CourseCard 
-                        key={course.id} 
-                        course={course} 
+                    <CourseCard
+                        key={course.id}
+                        course={course}
                         onClick={() => onCourseSelect(course)}
                     />
                 ))}

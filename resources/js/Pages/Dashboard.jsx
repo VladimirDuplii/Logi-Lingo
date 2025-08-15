@@ -15,7 +15,7 @@ export default function Dashboard({ auth }) {
         const fetchDashboardData = async () => {
             try {
                 // Get recent courses
-                const coursesResponse = await CourseService.getAllCourses();
+                const coursesResponse = await CourseService.getCourses();
                 // Just showing the latest 3 courses
                 setRecentCourses((coursesResponse.data.data || []).slice(0, 3));
                 
@@ -78,6 +78,21 @@ export default function Dashboard({ auth }) {
                                 </div>
                             </div>
 
+                            {/* Alternate content when no progress/courses */}
+                            {inProgressCourses.length === 0 && recentCourses.length === 0 && (
+                                <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
+                                    <div className="p-6 text-gray-900 text-center">
+                                        <h3 className="text-lg font-semibold mb-2">Get Started with Learning</h3>
+                                        <p className="text-gray-600 mb-4">
+                                            It looks like you haven't started any courses yet. Browse our available courses to begin your learning journey.
+                                        </p>
+                                        <Link href="/courses" className="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                                            Browse Courses
+                                        </Link>
+                                    </div>
+                                </div>
+                            )}
+
                             {/* In Progress Courses */}
                             {inProgressCourses.length > 0 && (
                                 <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
@@ -102,16 +117,16 @@ export default function Dashboard({ auth }) {
                             )}
 
                             {/* Recent Courses */}
-                            <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                                <div className="p-6 text-gray-900">
-                                    <div className="flex justify-between items-center mb-4">
-                                        <h3 className="text-lg font-semibold">Recent Courses</h3>
-                                        <Link href="/courses" className="text-blue-600 hover:text-blue-800 text-sm">
-                                            View All Courses →
-                                        </Link>
-                                    </div>
-                                    
-                                    {recentCourses.length > 0 ? (
+                            {recentCourses.length > 0 && (
+                                <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+                                    <div className="p-6 text-gray-900">
+                                        <div className="flex justify-between items-center mb-4">
+                                            <h3 className="text-lg font-semibold">Recent Courses</h3>
+                                            <Link href="/courses" className="text-blue-600 hover:text-blue-800 text-sm">
+                                                View All Courses →
+                                            </Link>
+                                        </div>
+                                        
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                             {recentCourses.map(course => (
                                                 <div key={course.id} className="course-card-wrapper" onClick={() => handleCourseSelect(course)}>
@@ -119,11 +134,9 @@ export default function Dashboard({ auth }) {
                                                 </div>
                                             ))}
                                         </div>
-                                    ) : (
-                                        <p className="text-gray-600">No courses available at this time.</p>
-                                    )}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </>
                     )}
                 </div>

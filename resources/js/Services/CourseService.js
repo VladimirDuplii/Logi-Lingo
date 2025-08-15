@@ -30,6 +30,28 @@ const CourseService = {
             throw error;
         }
     },
+
+    // Get lessons for a unit
+    getLessons: async (courseId, unitId) => {
+        try {
+            // Modify this endpoint based on your API structure
+            const response = await apiClient.get(`/courses/${courseId}/units/${unitId}/lessons`);
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
+    // Get questions for a lesson
+    getQuestions: async (courseId, unitId, lessonId) => {
+        try {
+            // Modify this endpoint based on your API structure
+            const response = await apiClient.get(`/courses/${courseId}/units/${unitId}/lessons/${lessonId}/questions`);
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    }
 };
 
 export default CourseService;
