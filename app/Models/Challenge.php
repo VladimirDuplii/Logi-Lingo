@@ -28,6 +28,11 @@ class Challenge extends Model
         return $this->hasMany(ChallengeOption::class);
     }
     
+    public function challengeProgress()
+    {
+        return $this->hasMany(ChallengeProgress::class);
+    }
+    
     public function progress()
     {
         return $this->hasMany(ChallengeProgress::class);

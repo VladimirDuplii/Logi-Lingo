@@ -12,6 +12,8 @@ class UserProgress extends Model
     protected $fillable = [
         'user_id',
         'active_course_id',
+        'user_name',
+        'user_image_src',
         'hearts',
         'points',
     ];
