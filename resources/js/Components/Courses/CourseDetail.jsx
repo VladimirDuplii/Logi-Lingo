@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CourseService } from '../../Services';
 import UnitList from './UnitList';
 
-const CourseDetail = ({ courseId, initialCourse, onUnitSelect }) => {
+const CourseDetail = ({ courseId, initialCourse, onUnitSelect, onLessonSelect }) => {
     const [course, setCourse] = useState(initialCourse || null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -70,7 +70,8 @@ const CourseDetail = ({ courseId, initialCourse, onUnitSelect }) => {
             
             <UnitList 
                 courseId={courseId} 
-                onUnitSelect={onUnitSelect} 
+                onUnitSelect={onUnitSelect}
+                onLessonSelect={onLessonSelect}
                 units={course.units || []}
             />
         </div>

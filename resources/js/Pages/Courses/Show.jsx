@@ -26,7 +26,8 @@ const CourseDetailsPage = ({ auth, course }) => {
         setSelectedLesson(null);
     };
 
-    const handleLessonSelect = (lesson) => {
+    const handleLessonSelect = (lesson, unit) => {
+        if (unit) setSelectedUnit(unit);
         setSelectedLesson(lesson);
     };
 
@@ -56,6 +57,7 @@ const CourseDetailsPage = ({ auth, course }) => {
                 courseId={course.id}
                 initialCourse={course}
                 onUnitSelect={handleUnitSelect}
+                onLessonSelect={handleLessonSelect}
             />
         );
     };
