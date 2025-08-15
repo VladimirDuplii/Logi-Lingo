@@ -34,6 +34,7 @@ class AuthAndCoursesTest extends TestCase
             ->assertJson(fn(AssertableJson $json) => $json
                 ->where('success', true)
                 ->has('data.access_token')
+                ->etc()
             );
 
         $token = $login->json('data.access_token');
