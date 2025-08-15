@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Head } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Courses } from '@/Components';
@@ -6,6 +6,20 @@ import { Courses } from '@/Components';
 const CourseDetailsPage = ({ auth, course }) => {
     const [selectedUnit, setSelectedUnit] = useState(null);
     const [selectedLesson, setSelectedLesson] = useState(null);
+
+    // If user came with ?start=1, auto-select first unit/lesson when available
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const url = new URL(window.location.href);
+        const shouldStart = url.searchParams.get('start') === '1';
+        if (shouldStart && course?.units?.length && !selectedUnit && !selectedLesson) {
+            const u = course.units[0];
+            setSelectedUnit(u);
+            if (u?.lessons?.length) {
+                setSelectedLesson(u.lessons[0]);
+            }
+        }
+    }, [course, selectedUnit, selectedLesson]);
 
     const handleUnitSelect = (unit) => {
         setSelectedUnit(unit);

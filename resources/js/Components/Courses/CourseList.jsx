@@ -38,8 +38,10 @@ const CourseList = ({ onCourseSelect }) => {
 
     return (
         <div className="course-list">
-            <h2>Available Courses</h2>
-            <div className="course-grid">
+            <div className="mb-6 flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-800">Курси</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {courses.map(course => (
                     <CourseCard
                         key={course.id}

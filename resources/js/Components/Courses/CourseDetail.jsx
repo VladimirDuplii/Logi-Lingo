@@ -6,6 +6,7 @@ const CourseDetail = ({ courseId, onUnitSelect }) => {
     const [course, setCourse] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [starting, setStarting] = useState(false);
 
     useEffect(() => {
         const fetchCourseDetails = async () => {
@@ -45,6 +46,21 @@ const CourseDetail = ({ courseId, onUnitSelect }) => {
                 <div className="course-meta">
                     <span className="course-level">Level: {course.level}</span>
                     <span className="course-units-count">Units: {course.units_count}</span>
+                </div>
+                <div className="mt-4">
+                    <button
+                        className="inline-flex items-center justify-center rounded-full bg-green-500 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                        onClick={() => {
+                            if (!course?.units?.length) return;
+                            setStarting(true);
+                            const firstUnit = course.units[0];
+                            if (onUnitSelect) onUnitSelect(firstUnit);
+                            setStarting(false);
+                        }}
+                        disabled={starting || !course?.units?.length}
+                    >
+                        Почати навчання
+                    </button>
                 </div>
             </div>
             
