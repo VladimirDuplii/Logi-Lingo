@@ -1,0 +1,447 @@
+{
+"info": {
+"_postman_id": "abcde123-1234-5678-9abc-123456789abc",
+"name": "LogicLingo API Tests",
+"description": "Тести API для LogicLingo додатку",
+"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+},
+"item": [
+{
+"name": "Авторизація",
+"item": [
+{
+"name": "Реєстрація користувача",
+"request": {
+"method": "POST",
+"header": [
+{
+"key": "Accept",
+"value": "application/json",
+"type": "text"
+},
+{
+"key": "Content-Type",
+"value": "application/json",
+"type": "text"
+}
+],
+"body": {
+"mode": "raw",
+"raw": "{\n    \"name\": \"Test User\",\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\",\n    \"password_confirmation\": \"password123\"\n}"
+},
+"url": {
+"raw": "http://127.0.0.1:8000/api/v1/auth/register",
+"protocol": "http",
+"host": [
+"127",
+"0",
+"0",
+"1"
+],
+"port": "8000",
+"path": [
+"api",
+"v1",
+"auth",
+"register"
+]
+},
+"description": "Реєстрація нового користувача"
+},
+"response": []
+},
+{
+"name": "Авторизація користувача",
+"event": [
+{
+"listen": "test",
+"script": {
+"exec": [
+"var jsonData = pm.response.json();",
+"",
+"if (jsonData.success && jsonData.data && jsonData.data.access_token) {",
+"    pm.environment.set('auth_token', jsonData.data.access_token);",
+"    console.log('Token збережено: ' + jsonData.data.access_token);",
+"}"
+],
+"type": "text/javascript"
+}
+}
+],
+"request": {
+"method": "POST",
+"header": [
+{
+"key": "Accept",
+"value": "application/json",
+"type": "text"
+},
+{
+"key": "Content-Type",
+"value": "application/json",
+"type": "text"
+}
+],
+"body": {
+"mode": "raw",
+"raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"password123\"\n}"
+},
+"url": {
+"raw": "http://127.0.0.1:8000/api/v1/auth/login",
+"protocol": "http",
+"host": [
+"127",
+"0",
+"0",
+"1"
+],
+"port": "8000",
+"path": [
+"api",
+"v1",
+"auth",
+"login"
+]
+},
+"description": "Авторизація користувача і отримання токену"
+},
+"response": []
+},
+{
+"name": "Отримання профілю",
+"request": {
+"auth": {
+"type": "bearer",
+"bearer": [
+{
+"key": "token",
+"value": "{{auth_token}}",
+"type": "string"
+}
+]
+},
+"method": "GET",
+"header": [
+{
+"key": "Accept",
+"value": "application/json",
+"type": "text"
+}
+],
+"url": {
+"raw": "http://127.0.0.1:8000/api/v1/auth/me",
+"protocol": "http",
+"host": [
+"127",
+"0",
+"0",
+"1"
+],
+"port": "8000",
+"path": [
+"api",
+"v1",
+"auth",
+"me"
+]
+},
+"description": "Отримання даних поточного користувача"
+},
+"response": []
+},
+{
+"name": "Вихід",
+"request": {
+"auth": {
+"type": "bearer",
+"bearer": [
+{
+"key": "token",
+"value": "{{auth_token}}",
+"type": "string"
+}
+]
+},
+"method": "POST",
+"header": [
+{
+"key": "Accept",
+"value": "application/json",
+"type": "text"
+}
+],
+"url": {
+"raw": "http://127.0.0.1:8000/api/v1/auth/logout",
+"protocol": "http",
+"host": [
+"127",
+"0",
+"0",
+"1"
+],
+"port": "8000",
+"path": [
+"api",
+"v1",
+"auth",
+"logout"
+]
+},
+"description": "Вихід користувача і відкликання токену"
+},
+"response": []
+}
+],
+"description": "Тести авторизації"
+},
+{
+"name": "Курси",
+"item": [
+{
+"name": "Отримання списку курсів",
+"request": {
+"auth": {
+"type": "bearer",
+"bearer": [
+{
+"key": "token",
+"value": "{{auth_token}}",
+"type": "string"
+}
+]
+},
+"method": "GET",
+"header": [
+{
+"key": "Accept",
+"value": "application/json",
+"type": "text"
+}
+],
+"url": {
+"raw": "http://127.0.0.1:8000/api/v1/courses",
+"protocol": "http",
+"host": [
+"127",
+"0",
+"0",
+"1"
+],
+"port": "8000",
+"path": [
+"api",
+"v1",
+"courses"
+]
+},
+"description": "Отримання списку всіх курсів"
+},
+"response": []
+},
+{
+"name": "Отримання деталей курсу",
+"request": {
+"auth": {
+"type": "bearer",
+"bearer": [
+{
+"key": "token",
+"value": "{{auth_token}}",
+"type": "string"
+}
+]
+},
+"method": "GET",
+"header": [
+{
+"key": "Accept",
+"value": "application/json",
+"type": "text"
+}
+],
+"url": {
+"raw": "http://127.0.0.1:8000/api/v1/courses/1",
+"protocol": "http",
+"host": [
+"127",
+"0",
+"0",
+"1"
+],
+"port": "8000",
+"path": [
+"api",
+"v1",
+"courses",
+"1"
+]
+},
+"description": "Отримання деталей конкретного курсу"
+},
+"response": []
+},
+{
+"name": "Встановлення активного курсу",
+"request": {
+"auth": {
+"type": "bearer",
+"bearer": [
+{
+"key": "token",
+"value": "{{auth_token}}",
+"type": "string"
+}
+]
+},
+"method": "POST",
+"header": [
+{
+"key": "Accept",
+"value": "application/json",
+"type": "text"
+}
+],
+"url": {
+"raw": "http://127.0.0.1:8000/api/v1/courses/1/active",
+"protocol": "http",
+"host": [
+"127",
+"0",
+"0",
+"1"
+],
+"port": "8000",
+"path": [
+"api",
+"v1",
+"courses",
+"1",
+"active"
+]
+},
+"description": "Встановлення активного курсу для користувача"
+},
+"response": []
+}
+],
+"description": "Тести для роботи з курсами"
+},
+{
+"name": "Прогрес",
+"item": [
+{
+"name": "Отримання прогресу користувача",
+"request": {
+"auth": {
+"type": "bearer",
+"bearer": [
+{
+"key": "token",
+"value": "{{auth_token}}",
+"type": "string"
+}
+]
+},
+"method": "GET",
+"header": [
+{
+"key": "Accept",
+"value": "application/json",
+"type": "text"
+}
+],
+"url": {
+"raw": "http://127.0.0.1:8000/api/v1/progress",
+"protocol": "http",
+"host": [
+"127",
+"0",
+"0",
+"1"
+],
+"port": "8000",
+"path": [
+"api",
+"v1",
+"progress"
+]
+},
+"description": "Отримання загального прогресу користувача"
+},
+"response": []
+},
+{
+"name": "Отримання прогресу по курсу",
+"request": {
+"auth": {
+"type": "bearer",
+"bearer": [
+{
+"key": "token",
+"value": "{{auth_token}}",
+"type": "string"
+}
+]
+},
+"method": "GET",
+"header": [
+{
+"key": "Accept",
+"value": "application/json",
+"type": "text"
+}
+],
+"url": {
+"raw": "http://127.0.0.1:8000/api/v1/progress/courses/1",
+"protocol": "http",
+"host": [
+"127",
+"0",
+"0",
+"1"
+],
+"port": "8000",
+"path": [
+"api",
+"v1",
+"progress",
+"courses",
+"1"
+]
+},
+"description": "Отримання прогресу користувача по конкретному курсу"
+},
+"response": []
+}
+],
+"description": "Тести для роботи з прогресом"
+}
+],
+"event": [
+{
+"listen": "prerequest",
+"script": {
+"type": "text/javascript",
+"exec": [
+""
+]
+}
+},
+{
+"listen": "test",
+"script": {
+"type": "text/javascript",
+"exec": [
+""
+]
+}
+}
+],
+"variable": [
+{
+"key": "baseUrl",
+"value": "http://127.0.0.1:8000",
+"type": "string"
+}
+]
+}

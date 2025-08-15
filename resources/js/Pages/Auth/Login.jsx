@@ -1,33 +1,78 @@
+import React, { useState } from 'react';
 import Checkbox from '@/Components/Checkbox';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
+import { AuthService } from '@/Services';
 
 export default function Login({ status, canResetPassword }) {
-    const { data, setData, post, processing, errors, reset } = useForm({
+    const [data, setData] = useState({
         email: '',
         password: '',
         remember: false,
     });
+    
+    const [errors, setErrors] = useState({});
+    const [processing, setProcessing] = useState(false);
+    const [loginStatus, setLoginStatus] = useState(status);
 
-    const submit = (e) => {
+    const handleChange = (e) => {
+        const { name, value, checked } = e.target;
+        const fieldValue = name === 'remember' ? checked : value;
+        
+        setData(prevData => ({
+            ...prevData,
+            [name]: fieldValue
+        }));
+    };
+
+    const submit = async (e) => {
         e.preventDefault();
+        setProcessing(true);
+        setErrors({});
 
-        post(route('login'), {
-            onFinish: () => reset('password'),
-        });
+        try {
+            // Викликаємо API для входу
+            const response = await AuthService.login({
+                email: data.email,
+                password: data.password
+            });
+            
+            // Після успішного входу перенаправляємо на дашборд
+            if (response.success) {
+                setLoginStatus('Успішний вхід. Перенаправлення...');
+                window.location.href = '/dashboard';
+            }
+        } catch (error) {
+            // Обробляємо помилки від API
+            if (error.response && error.response.data) {
+                const responseData = error.response.data;
+                
+                if (responseData.message) {
+                    setLoginStatus(responseData.message);
+                }
+                
+                if (responseData.errors) {
+                    setErrors(responseData.errors);
+                }
+            } else {
+                setLoginStatus('Помилка входу. Спробуйте ще раз.');
+            }
+        } finally {
+            setProcessing(false);
+        }
     };
 
     return (
         <GuestLayout>
             <Head title="Log in" />
 
-            {status && (
+            {loginStatus && (
                 <div className="mb-4 text-sm font-medium text-green-600">
-                    {status}
+                    {loginStatus}
                 </div>
             )}
 
@@ -43,7 +88,7 @@ export default function Login({ status, canResetPassword }) {
                         className="mt-1 block w-full"
                         autoComplete="username"
                         isFocused={true}
-                        onChange={(e) => setData('email', e.target.value)}
+                        onChange={handleChange}
                     />
 
                     <InputError message={errors.email} className="mt-2" />
@@ -59,7 +104,7 @@ export default function Login({ status, canResetPassword }) {
                         value={data.password}
                         className="mt-1 block w-full"
                         autoComplete="current-password"
-                        onChange={(e) => setData('password', e.target.value)}
+                        onChange={handleChange}
                     />
 
                     <InputError message={errors.password} className="mt-2" />
@@ -70,9 +115,7 @@ export default function Login({ status, canResetPassword }) {
                         <Checkbox
                             name="remember"
                             checked={data.remember}
-                            onChange={(e) =>
-                                setData('remember', e.target.checked)
-                            }
+                            onChange={handleChange}
                         />
                         <span className="ms-2 text-sm text-gray-600">
                             Remember me
