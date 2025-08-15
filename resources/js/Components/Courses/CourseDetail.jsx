@@ -2,16 +2,20 @@ import React, { useState, useEffect } from 'react';
 import { CourseService } from '../../Services';
 import UnitList from './UnitList';
 
-const CourseDetail = ({ courseId, onUnitSelect }) => {
-    const [course, setCourse] = useState(null);
+const CourseDetail = ({ courseId, initialCourse, onUnitSelect }) => {
+    const [course, setCourse] = useState(initialCourse || null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [starting, setStarting] = useState(false);
 
     useEffect(() => {
         const fetchCourseDetails = async () => {
+            // If we already have initial course from server, don't refetch
+            if (initialCourse) {
+                setLoading(false);
+                return;
+            }
             if (!courseId) return;
-            
             try {
                 const response = await CourseService.getCourseById(courseId);
                 setCourse(response.data.data);
@@ -24,7 +28,7 @@ const CourseDetail = ({ courseId, onUnitSelect }) => {
         };
 
         fetchCourseDetails();
-    }, [courseId]);
+    }, [courseId, initialCourse]);
 
     if (loading) {
         return <div className="loading">Loading course details...</div>;

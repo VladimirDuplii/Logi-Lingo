@@ -54,6 +54,7 @@ const CourseDetailsPage = ({ auth, course }) => {
         return (
             <Courses.CourseDetail 
                 courseId={course.id}
+                initialCourse={course}
                 onUnitSelect={handleUnitSelect}
             />
         );
