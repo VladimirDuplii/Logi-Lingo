@@ -11,7 +11,8 @@ const CourseList = ({ onCourseSelect }) => {
         const fetchCourses = async () => {
             try {
                 const response = await CourseService.getCourses();
-                setCourses(response.data.data || []);
+                // API returns { success, data: { courses, activeCourseId }, message }
+                setCourses((response?.data?.courses) || []);
             } catch (err) {
                 setError('Failed to load courses. Please try again later.');
                 console.error('Error fetching courses:', err);
