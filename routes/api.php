@@ -33,6 +33,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/courses', [CourseController::class, 'index']);
         Route::get('/courses/{id}', [CourseController::class, 'show']);
         Route::post('/courses/{id}/active', [CourseController::class, 'setActive']);
+    Route::get('/courses/{courseId}/units/{unitId}/lessons', [CourseController::class, 'lessons']);
+    Route::get('/courses/{courseId}/units/{unitId}/lessons/{lessonId}/questions', [CourseController::class, 'questions']);
         
         // Прогрес
         Route::get('/progress', [ProgressController::class, 'getUserProgress']);
