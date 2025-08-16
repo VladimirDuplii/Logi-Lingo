@@ -13,7 +13,7 @@ const CourseDetailsPage = ({ auth, course }) => {
         const url = new URL(window.location.href);
         const shouldStart = url.searchParams.get('start') === '1';
         if (shouldStart && course?.units?.length && !selectedUnit && !selectedLesson) {
-            const u = course.units[0];
+            const u = course.units.find((u) => Array.isArray(u.lessons) && u.lessons.length > 0) || course.units[0];
             setSelectedUnit(u);
             if (u?.lessons?.length) {
                 setSelectedLesson(u.lessons[0]);

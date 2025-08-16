@@ -57,7 +57,7 @@ const CourseDetail = ({ courseId, initialCourse, onUnitSelect, onLessonSelect })
                         onClick={() => {
                             if (!course?.units?.length) return;
                             setStarting(true);
-                            const firstUnit = course.units[0];
+                            const firstUnit = (course.units.find(u => Array.isArray(u.lessons) && u.lessons.length > 0) || course.units[0]);
                             if (onUnitSelect) onUnitSelect(firstUnit);
                             setStarting(false);
                         }}
@@ -65,6 +65,9 @@ const CourseDetail = ({ courseId, initialCourse, onUnitSelect, onLessonSelect })
                     >
                         Почати навчання
                     </button>
+                    {!course?.units?.some(u => Array.isArray(u.lessons) && u.lessons.length > 0) && (
+                        <p className="mt-2 text-sm text-gray-600">У першого розділу немає уроків. Оберіть інший розділ нижче.</p>
+                    )}
                 </div>
             </div>
             
