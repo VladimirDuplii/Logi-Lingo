@@ -169,9 +169,12 @@ class ProgressController extends BaseApiController
             ]
         );
         
-        // Якщо завдання виконане успішно, додаємо бали користувачу
-        $userProgress = UserProgress::where('user_id', Auth::id())->first();
-        if ($request->completed && $userProgress) {
+        // Якщо завдання виконане успішно, додаємо бали користувачу (створюємо запис при необхідності)
+        $userProgress = UserProgress::firstOrCreate(
+            ['user_id' => Auth::id()],
+            ['hearts' => 5, 'points' => 0]
+        );
+        if ($request->completed) {
             $userProgress->points += 10;
             $userProgress->save();
         }
@@ -197,11 +200,10 @@ class ProgressController extends BaseApiController
             return $this->sendError('Challenge not found.');
         }
         
-        $userProgress = UserProgress::where('user_id', Auth::id())->first();
-        
-        if (!$userProgress) {
-            return $this->sendError('User progress not found.');
-        }
+        $userProgress = UserProgress::firstOrCreate(
+            ['user_id' => Auth::id()],
+            ['hearts' => 5, 'points' => 0]
+        );
         
         // Перевіряємо, чи є життя
         if ($userProgress->hearts <= 0) {
