@@ -29,7 +29,7 @@ const ProgressBar = ({ value, total, onExit, hearts }) => {
           <div className="h-[5px] w-full rounded-full bg-green-400"></div>
         </div>
       </div>
-      {[1, 2, 3].map((i) => (
+  {[1, 2, 3, 4, 5].map((i) => (
         <Heart key={i} filled={hearts === null ? false : i <= hearts} />
       ))}
     </header>
@@ -189,7 +189,7 @@ const WriteIn = ({ question, selectedIndices, setSelectedIndices }) => {
   );
 };
 
-const LessonComplete = ({ correct, total, onExit, awardedXp }) => {
+const LessonComplete = ({ correct, total, onExit, displayXp }) => {
   return (
     <div className="flex min-h-screen flex-col gap-5 px-4 py-5 sm:px-0 sm:py-0">
       <div className="flex grow flex-col items-center justify-center gap-8 font-bold">
@@ -197,9 +197,7 @@ const LessonComplete = ({ correct, total, onExit, awardedXp }) => {
         <div className="flex flex-wrap justify-center gap-5">
           <div className="min-w-[110px] rounded-xl border-2 border-yellow-400 bg-yellow-400">
             <h2 className="py-1 text-center text-white">Total XP</h2>
-            <div className="flex justify-center rounded-xl bg-white py-4 text-yellow-400">
-              {awardedXp ?? correct}
-            </div>
+            <div className="flex justify-center rounded-xl bg-white py-4 text-yellow-400">{displayXp}</div>
           </div>
           <div className="min-w-[110px] rounded-xl border-2 border-green-400 bg-green-400">
             <h2 className="py-1 text-center text-white">Accuracy</h2>
@@ -326,8 +324,13 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
     try {
       await ProgressService.updateChallengeProgress(q.id, correct);
       if (!correct) {
-        await ProgressService.reduceHearts(q.id);
-        setHearts((h) => (typeof h === 'number' ? Math.max(h - 1, 0) : h));
+        const r = await ProgressService.reduceHearts(q.id);
+        const newHearts = r?.data?.hearts ?? r?.hearts;
+        if (typeof newHearts === 'number') {
+          setHearts(newHearts);
+        } else {
+          setHearts((h) => (typeof h === 'number' ? Math.max(h - 1, 0) : h));
+        }
       }
       if (correct) setCorrectCount((c) => c + 1);
       else setIncorrectCount((c) => c + 1);
@@ -346,7 +349,8 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
 
 
   if (completed) {
-    return <LessonComplete correct={correctCount} total={questions.length} awardedXp={awardedXp} onExit={onExit} />;
+    const displayXp = (correctCount * 10) + (awardedXp ?? 0);
+    return <LessonComplete correct={correctCount} total={questions.length} displayXp={displayXp} onExit={onExit} />;
   }
 
   const correctAnswerText = mcMode

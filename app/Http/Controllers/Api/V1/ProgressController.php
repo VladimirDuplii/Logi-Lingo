@@ -170,16 +170,17 @@ class ProgressController extends BaseApiController
         );
         
         // Якщо завдання виконане успішно, додаємо бали користувачу
-        if ($request->completed) {
-            $userProgress = UserProgress::where('user_id', Auth::id())->first();
-            
-            if ($userProgress) {
-                $userProgress->points += 10;
-                $userProgress->save();
-            }
+        $userProgress = UserProgress::where('user_id', Auth::id())->first();
+        if ($request->completed && $userProgress) {
+            $userProgress->points += 10;
+            $userProgress->save();
         }
         
-        return $this->sendResponse($progress, 'Challenge progress updated successfully.');
+        return $this->sendResponse([
+            'progress' => $progress,
+            'points' => $userProgress?->points,
+            'hearts' => $userProgress?->hearts,
+        ], 'Challenge progress updated successfully.');
     }
 
     /**
