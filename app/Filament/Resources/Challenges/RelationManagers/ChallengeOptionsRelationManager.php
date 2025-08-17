@@ -45,8 +45,10 @@ class ChallengeOptionsRelationManager extends RelationManager
                     ->label('Шлях до аудіо'),
                 FileUpload::make('image_src')
                     ->label('Зображення')
+                    ->disk('public')
                     ->image()
-                    ->directory('challenge-options'),
+                    ->directory('challenge-options')
+                    ->visibility('public'),
             ]);
     }
 
@@ -66,6 +68,14 @@ class ChallengeOptionsRelationManager extends RelationManager
                     ->toggleable(isToggledHiddenByDefault: true),
                 ImageColumn::make('image_src')
                     ->label('Зображення')
+                    ->disk('public')
+                    ->getStateUsing(function ($record) {
+                        $p = ltrim((string)($record->image_src ?? ''), '/');
+                        if ($p === '') return $p;
+                        if (str_starts_with($p, 'storage/')) $p = substr($p, 8);
+                        if (str_starts_with($p, 'public/')) $p = substr($p, 7);
+                        return $p; // relative path resolved via public disk
+                    })
                     ->toggleable(),
                 TextColumn::make('created_at')
                     ->label('Створено')

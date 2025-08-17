@@ -9,9 +9,34 @@ use App\Models\Lesson;
 use App\Models\UserProgress;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class CourseController extends BaseApiController
 {
+    /**
+     * Normalize a stored path to a public URL.
+     */
+    protected function fileUrl(?string $path): ?string
+    {
+        if (!$path) return null;
+        // Already absolute URL
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+        // Already public path
+        if (str_starts_with($path, '/')) {
+            return $path;
+        }
+        if (str_starts_with($path, 'storage/')) {
+            return '/' . ltrim($path, '/');
+        }
+        // If accidentally stored with 'public/' prefix, strip it
+        if (str_starts_with($path, 'public/')) {
+            $path = substr($path, 7);
+        }
+    // Generate a public URL (honors public disk mapping to /storage)
+    return Storage::url($path);
+    }
     /**
      * Отримати список усіх курсів
      *
@@ -130,15 +155,15 @@ class CourseController extends BaseApiController
                     'text' => $challenge->question,
                     'type' => $challenge->type,
                     'order' => $challenge->order,
-                    'image_url' => $challenge->image_src,
-                    'audio_url' => $challenge->audio_src,
+            'image_url' => $this->fileUrl($challenge->image_src),
+            'audio_url' => $this->fileUrl($challenge->audio_src),
                     'options' => $challenge->options->map(function ($opt) {
                         return [
                             'id' => $opt->id,
                             'text' => $opt->text,
                             'is_correct' => (bool) $opt->is_correct,
-                            'image_url' => $opt->image_src,
-                            'audio_url' => $opt->audio_src,
+                'image_url' => $this->fileUrl($opt->image_src ?? null),
+                'audio_url' => $this->fileUrl($opt->audio_src ?? null),
                         ];
                     })->values()->all(),
                 ];

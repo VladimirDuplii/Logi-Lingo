@@ -47,7 +47,9 @@ const QuestionItem = ({ question, onAnswered }) => {
             )}
             
             <div className="options-list">
-                {question.options.map(option => (
+                {question.options.map(option => {
+                    console.log('Option data:', option); // Debug
+                    return (
                     <div 
                         key={option.id}
                         className={`option-item ${selectedOption === option.id ? 'selected' : ''} ${
@@ -65,7 +67,8 @@ const QuestionItem = ({ question, onAnswered }) => {
                             </div>
                         )}
                     </div>
-                ))}
+                    );
+                })}
             </div>
             
             <div className="question-actions">

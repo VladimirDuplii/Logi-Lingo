@@ -35,7 +35,13 @@ class CourseSeeder extends Seeder
         ];
 
         foreach ($courses as $course) {
-            Course::create($course);
+            Course::updateOrCreate(
+                ['title' => $course['title']],
+                [
+                    'image_src' => $course['image_src'],
+                    'updated_at' => now(),
+                ] + (isset($course['created_at']) ? [] : ['created_at' => now()])
+            );
         }
     }
 }

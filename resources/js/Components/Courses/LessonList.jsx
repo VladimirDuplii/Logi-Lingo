@@ -12,7 +12,12 @@ const LessonList = ({ courseId, unitId, onLessonSelect }) => {
             
             try {
                 const response = await CourseService.getLessons(courseId, unitId);
-                setLessons(response.data.data || []);
+                console.log('Lessons API response:', response); // Debug log
+                // Перевіряємо всі можливі структури відповіді
+                const lessonsData = Array.isArray(response.data) 
+                    ? response.data 
+                    : (response.data.data || []);
+                setLessons(lessonsData);
             } catch (err) {
                 setError('Failed to load lessons. Please try again later.');
                 console.error('Error fetching lessons:', err);

@@ -18,7 +18,12 @@ const CourseDetail = ({ courseId, initialCourse, onUnitSelect, onLessonSelect })
             if (!courseId) return;
             try {
                 const response = await CourseService.getCourseById(courseId);
-                setCourse(response.data.data);
+                console.log('Course API response:', response); // Debug log
+                // Перевіряємо всі можливі структури відповіді
+                const courseData = response.data && response.data.data 
+                    ? response.data.data 
+                    : response.data;
+                setCourse(courseData);
             } catch (err) {
                 setError('Failed to load course details. Please try again later.');
                 console.error('Error fetching course details:', err);

@@ -15,7 +15,12 @@ const QuestionList = ({ courseId, unitId, lessonId }) => {
             
             try {
                 const response = await CourseService.getQuestions(courseId, unitId, lessonId);
-                setQuestions(response.data.data || []);
+                console.log('API response:', response); // Debug log
+                // Перевіряємо всі можливі структури відповіді
+                const questionsData = Array.isArray(response.data) 
+                    ? response.data 
+                    : (response.data.data || []);
+                setQuestions(questionsData);
             } catch (err) {
                 setError('Failed to load questions. Please try again later.');
                 console.error('Error fetching questions:', err);
