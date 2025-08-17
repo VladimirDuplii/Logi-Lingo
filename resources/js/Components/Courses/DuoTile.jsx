@@ -69,12 +69,19 @@ export const DuoTileButton = ({
     defaultColors,
     onClick,
     children,
+    ringPercent = 0,
 }) => {
     const colors = status === 'LOCKED'
         ? 'border-gray-300 bg-gray-200'
         : status === 'COMPLETE'
             ? 'border-yellow-500 bg-yellow-400'
             : defaultColors;
+    const pct = Math.max(0, Math.min(100, ringPercent));
+    // SVG circle dimensions
+    const size = 88;
+    const radius = 40;
+    const circumference = 2 * Math.PI * radius;
+    const dash = (pct / 100) * circumference;
     return (
         <button
             className={`relative m-3 rounded-full border-b-8 p-4 ${colors} transition hover:brightness-105`}
@@ -82,6 +89,26 @@ export const DuoTileButton = ({
             disabled={status === 'LOCKED'}
             aria-disabled={status === 'LOCKED'}
         >
+            {/* Background ring */}
+            <svg
+                width={size}
+                height={size}
+                viewBox={`0 0 ${size} ${size}`}
+                className="absolute left-1/2 top-1/2 -z-10 -translate-x-1/2 -translate-y-1/2"
+            >
+                <circle cx={size/2} cy={size/2} r={radius} stroke="#e5e7eb" strokeWidth="8" fill="none" />
+                <circle
+                    cx={size/2}
+                    cy={size/2}
+                    r={radius}
+                    stroke="#f59e0b"
+                    strokeWidth="8"
+                    strokeDasharray={`${dash} ${circumference - dash}`}
+                    strokeLinecap="round"
+                    fill="none"
+                    transform={`rotate(-90 ${size/2} ${size/2})`}
+                />
+            </svg>
             {children}
         </button>
     );

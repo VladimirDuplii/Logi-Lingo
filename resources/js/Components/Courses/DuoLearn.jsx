@@ -87,6 +87,12 @@ const DuoUnitSection = ({ unit, onStartLesson, completedCount }) => {
                                     type={tile.type}
                                     status={status}
                                     defaultColors={`${unit.borderColor} ${unit.backgroundColor}`}
+                                    ringPercent={(() => {
+                                        const l = tile.lesson;
+                                        const c = l?.progress?.completed_challenges ?? 0;
+                                        const t = l?.progress?.total_challenges ?? 0;
+                                        return t > 0 ? Math.round((c / t) * 100) : 0;
+                                    })()}
                                     onClick={() => {
                                         if (tile.lesson) onStartLesson(tile.lesson, unit);
                                         setSelectedTile(i);

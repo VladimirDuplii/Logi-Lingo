@@ -148,22 +148,38 @@ class ProgressController extends BaseApiController
         
         // Форматуємо дані, додаючи статус виконання для кожного уроку
         $formattedUnits = $units->map(function($unit) {
-            $lessonsWithCompletedStatus = $unit->lessons->map(function($lesson) {
-                if ($lesson->challenges->isEmpty()) {
-                    return array_merge($lesson->toArray(), ['completed' => false]);
+            $lessonsWithStatus = $unit->lessons->map(function($lesson) {
+                $totalChallenges = $lesson->challenges->count();
+                if ($totalChallenges === 0) {
+                    return array_merge($lesson->toArray(), [
+                        'completed' => false,
+                        'progress' => [
+                            'completed_challenges' => 0,
+                            'total_challenges' => 0,
+                        ],
+                    ]);
                 }
-                
-                $allChallengesCompleted = $lesson->challenges->every(function($challenge) {
-                    return $challenge->challengeProgress->isNotEmpty() && 
-                           $challenge->challengeProgress->every(function($progress) {
-                               return $progress->completed;
-                           });
-                });
-                
-                return array_merge($lesson->toArray(), ['completed' => $allChallengesCompleted]);
+
+                $completedCount = 0;
+                foreach ($lesson->challenges as $challenge) {
+                    if ($challenge->challengeProgress->isNotEmpty() &&
+                        $challenge->challengeProgress->every(function($progress) { return $progress->completed; })) {
+                        $completedCount++;
+                    }
+                }
+
+                $allChallengesCompleted = ($completedCount >= $totalChallenges);
+
+                return array_merge($lesson->toArray(), [
+                    'completed' => $allChallengesCompleted,
+                    'progress' => [
+                        'completed_challenges' => $completedCount,
+                        'total_challenges' => $totalChallenges,
+                    ],
+                ]);
             });
-            
-            return array_merge($unit->toArray(), ['lessons' => $lessonsWithCompletedStatus]);
+
+            return array_merge($unit->toArray(), ['lessons' => $lessonsWithStatus]);
         });
         
         return $this->sendResponse($formattedUnits, 'Course progress retrieved successfully.');

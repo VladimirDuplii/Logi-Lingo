@@ -263,6 +263,7 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
   const [incorrectCount, setIncorrectCount] = useState(0);
   const [hearts, setHearts] = useState(null);
   const [noHearts, setNoHearts] = useState(false);
+  const [refillMsg, setRefillMsg] = useState('');
   // Keep this state before any early returns to preserve hook order
   const [completed, setCompleted] = useState(false);
   const [awardedXp, setAwardedXp] = useState(null);
@@ -393,7 +394,7 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-xl">
             <div className="mb-2 text-2xl font-bold text-rose-600">Немає сердець</div>
-            <p className="mb-4 text-gray-700">Пополни серця, щоб продовжити урок.</p>
+            <p className="mb-4 text-gray-700">Поповни серця, щоб продовжити урок.</p>
             <div className="flex justify-center gap-3">
               <button
                 onClick={onExit}
@@ -401,13 +402,39 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
               >
                 Вийти
               </button>
-              <a
-                href="/dashboard"
+              <button
+                onClick={async () => {
+                  setRefillMsg('');
+                  try {
+                    const res = await ProgressService.refillHearts();
+                    const heartsVal = res?.data?.hearts ?? res?.hearts;
+                    if (typeof heartsVal === 'number') {
+                      setHearts(heartsVal);
+                      if (heartsVal > 0) {
+                        setNoHearts(false);
+                        setRefillMsg('');
+                        return;
+                      }
+                    }
+                    setRefillMsg('Не вдалося поповнити серця.');
+                  } catch (e) {
+                    const status = e?.response?.status;
+                    const msg = e?.response?.data?.message || '';
+                    if (status === 400 && msg.includes('Not enough points')) {
+                      setRefillMsg('Недостатньо очок для поповнення.');
+                    } else if (status === 400 && msg.includes('Hearts are already full')) {
+                      setRefillMsg('Серця вже повні.');
+                    } else {
+                      setRefillMsg('Сталася помилка. Спробуй ще раз.');
+                    }
+                  }
+                }}
                 className="rounded-full bg-rose-500 px-4 py-2 font-semibold text-white hover:bg-rose-600"
               >
                 Поповнити
-              </a>
+              </button>
             </div>
+            {refillMsg && <div className="mt-3 text-sm text-rose-600">{refillMsg}</div>}
           </div>
         </div>
       )}
