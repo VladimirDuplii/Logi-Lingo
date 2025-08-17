@@ -1,4 +1,5 @@
-import React, { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Fragment, useEffect, useMemo, useState } from 'react';
+import { ProgressService } from '../../Services';
 import DuoTileButton, { DuoTileIcon } from './DuoTile';
 
 // Compute tile status from local progress (lessonsCompleted) and tile linear index
@@ -59,7 +60,7 @@ const DuoUnitHeader = ({ unitNumber, description, backgroundColor = 'bg-[#58cc02
     );
 };
 
-const DuoUnitSection = ({ unit, onStartLesson, lessonsCompleted }) => {
+const DuoUnitSection = ({ unit, onStartLesson, completedCount }) => {
     const [selectedTile, setSelectedTile] = useState(null);
     useEffect(() => {
         const unselect = () => setSelectedTile(null);
@@ -73,7 +74,7 @@ const DuoUnitSection = ({ unit, onStartLesson, lessonsCompleted }) => {
             <div className="relative mb-8 mt-[20px] flex max-w-2xl flex-col items-center gap-4">
                 {unit.tiles.map((tile, i) => {
                     const flatIndex = i; // since per unit mapping
-                    const status = computeTileStatus(flatIndex, lessonsCompleted);
+                    const status = computeTileStatus(flatIndex, completedCount, 1);
                     return (
                         <Fragment key={i}>
                             <div
@@ -103,23 +104,42 @@ const DuoUnitSection = ({ unit, onStartLesson, lessonsCompleted }) => {
 };
 
 const DuoLearn = ({ course, onUnitSelect, onLessonSelect }) => {
-    const [lessonsCompleted, setLessonsCompleted] = useState(0);
-    // For now, keep local in-memory progress; can be wired to API later
+    // Per-unit completed lessons count fetched from backend progress
+    const [completedByUnit, setCompletedByUnit] = useState({});
 
     const units = useMemo(() => mapUnitsToTiles(course?.units || []), [course]);
 
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                if (!course?.id) return;
+                const cp = await ProgressService.getCourseProgress(course.id);
+                const unitsData = cp?.data || [];
+                const byUnit = {};
+                unitsData.forEach((u) => {
+                    const lessons = Array.isArray(u?.lessons) ? u.lessons : [];
+                    byUnit[u.id] = lessons.filter((l) => !!l?.completed).length;
+                });
+                if (mounted) setCompletedByUnit(byUnit);
+            } catch (_) {
+                if (mounted) setCompletedByUnit({});
+            }
+        })();
+        return () => { mounted = false; };
+    }, [course?.id]);
+
     return (
         <div className="flex max-w-5xl grow flex-col">
-            {units.map((unit) => (
+        {units.map((unit) => (
                 <DuoUnitSection
                     key={unit.unitNumber}
                     unit={unit}
-                    lessonsCompleted={lessonsCompleted}
+            completedCount={completedByUnit[unit.id] || 0}
                     onStartLesson={(lesson, mappedUnit) => {
                         // mappedUnit contains id/order/title copied from original
                         if (onUnitSelect) onUnitSelect({ id: mappedUnit.id, title: mappedUnit.title, order: mappedUnit.order, ...mappedUnit });
                         if (onLessonSelect) onLessonSelect(lesson, { id: mappedUnit.id, title: mappedUnit.title, order: mappedUnit.order, ...mappedUnit });
-                        setLessonsCompleted((x) => x + 1);
                     }}
                 />
             ))}
