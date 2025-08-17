@@ -118,6 +118,15 @@ const MultipleChoice = ({ question, selected, setSelected }) => {
   return (
     <section className="flex max-w-2xl grow flex-col gap-5 self-center sm:items-center sm:justify-center sm:gap-24 sm:px-5">
       <h1 className="self-start text-2xl font-bold sm:text-3xl">{question.text}</h1>
+      {question.image_url ? (
+        <div className="w-full flex items-center justify-center">
+          <img
+            src={question.image_url}
+            alt="Question"
+            className="max-h-48 w-auto object-contain"
+          />
+        </div>
+      ) : null}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup">
         {answers.map((ans, i) => (
           <div
@@ -152,6 +161,18 @@ const WriteIn = ({ question, selectedIndices, setSelectedIndices }) => {
   return (
     <section className="flex max-w-2xl grow flex-col gap-5 self-center sm:items-center sm:justify-center sm:gap-24">
       <h1 className="mb-2 text-2xl font-bold sm:text-3xl">Write this in English</h1>
+      {question.image_url ? (
+        <div className="w-full flex items-center justify-center">
+          <img
+            src={question.image_url}
+            alt="Question"
+            className="max-h-48 w-auto object-contain"
+          />
+        </div>
+      ) : null}
+      {question.text ? (
+        <p className="text-center text-gray-700">{question.text}</p>
+      ) : null}
       <div className="w-full">
         <div className="flex min-h-[60px] flex-wrap gap-1 border-b-2 border-t-2 border-gray-200 py-1">
           {selectedIndices.map((i) => (
