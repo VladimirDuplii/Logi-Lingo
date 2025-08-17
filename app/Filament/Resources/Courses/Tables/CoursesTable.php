@@ -17,7 +17,14 @@ class CoursesTable
             ->columns([
                 TextColumn::make('title')
                     ->searchable(),
-                ImageColumn::make('image_src'),
+                ImageColumn::make('image_src')
+                    ->getStateUsing(function ($record) {
+                        $p = ltrim((string)($record->image_src ?? ''), '/');
+                        if ($p === '') return $p;
+                        if (str_starts_with($p, 'storage/')) $p = substr($p, 8);
+                        if (str_starts_with($p, 'public/')) $p = substr($p, 7);
+                        return '/storage/' . ltrim($p, '/');
+                    }),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

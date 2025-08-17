@@ -1,6 +1,31 @@
 import apiClient from "./ApiService";
 
 const ProgressService = {
+    // No-op helpers for UI tracking (avoid console errors in components)
+    trackUnitView: async (_courseId, _unitId) => Promise.resolve(),
+    trackLessonStart: async (_courseId, _unitId, _lessonId) => Promise.resolve(),
+    trackLessonComplete: async (_courseId, _unitId, _lessonId) => Promise.resolve(),
+    completeLesson: async (lessonId, correct, total) => {
+        try {
+            const response = await apiClient.post(`/progress/lessons/${lessonId}/complete`, { correct, total });
+            return response.data;
+        } catch (error) {
+            console.error(`Error completing lesson ${lessonId}:`, error);
+            throw error;
+        }
+    },
+    trackQuestionAnswered: async (courseId, unitId, lessonId, challengeId, isCorrect) => {
+        try {
+            // Update challenge progress
+            await ProgressService.updateChallengeProgress(challengeId, isCorrect);
+            if (!isCorrect) {
+                await ProgressService.reduceHearts(challengeId);
+            }
+        } catch (e) {
+            // best-effort; surface in console for debugging
+            console.error('trackQuestionAnswered failed', { courseId, unitId, lessonId, challengeId, isCorrect }, e);
+        }
+    },
     // Get user progress
     getUserProgress: async () => {
         try {

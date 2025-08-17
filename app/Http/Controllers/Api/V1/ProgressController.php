@@ -15,6 +15,23 @@ use Illuminate\Support\Facades\Validator;
 
 class ProgressController extends BaseApiController
 {
+    /** Ensure hearts and points are initialized */
+    protected function normalizeUserProgress(UserProgress $progress): UserProgress
+    {
+        $changed = false;
+        if (!is_int($progress->hearts)) {
+            $progress->hearts = is_numeric($progress->hearts) ? (int)$progress->hearts : 5;
+            $changed = true;
+        }
+        if (!is_int($progress->points)) {
+            $progress->points = is_numeric($progress->points) ? (int)$progress->points : 0;
+            $changed = true;
+        }
+        if ($changed) {
+            $progress->save();
+        }
+        return $progress;
+    }
     /**
      * Отримати прогрес користувача
      *
@@ -33,8 +50,57 @@ class ProgressController extends BaseApiController
             $userProgress->points = 0;
             $userProgress->save();
         }
-        
+    $userProgress = $this->normalizeUserProgress($userProgress);
         return $this->sendResponse($userProgress, 'User progress retrieved successfully.');
+    }
+
+    /**
+     * Зарахувати бали за проходження уроку
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $lessonId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function completeLesson(Request $request, $lessonId)
+    {
+        $validator = Validator::make($request->all(), [
+            'correct' => 'required|integer|min:0',
+            'total' => 'required|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->sendError('Validation Error.', $validator->errors()->toArray(), 422);
+        }
+
+        $lesson = Lesson::find($lessonId);
+        if (is_null($lesson)) {
+            return $this->sendError('Lesson not found.');
+        }
+
+    $userProgress = UserProgress::firstOrCreate(
+            ['user_id' => Auth::id()],
+            ['hearts' => 5, 'points' => 0]
+        );
+    $userProgress = $this->normalizeUserProgress($userProgress);
+
+        // Completion bonus only (per-challenge XP is handled in updateChallengeProgress)
+        $correct = (int) $request->integer('correct');
+        $total = (int) $request->integer('total');
+
+        // Base completion bonus + flawless bonus
+        $xp = 10;
+        if ($total > 0 && $correct === $total) {
+            $xp += 10; // flawless bonus
+        }
+
+        $userProgress->points += $xp;
+        $userProgress->save();
+
+        return $this->sendResponse([
+            'awarded_xp' => $xp,
+            'points' => $userProgress->points,
+            'hearts' => $userProgress->hearts,
+        ], 'Lesson completed and points awarded.');
     }
 
     /**
@@ -121,17 +187,22 @@ class ProgressController extends BaseApiController
             ]
         );
         
-        // Якщо завдання виконане успішно, додаємо бали користувачу
+        // Якщо завдання виконане успішно, додаємо бали користувачу (створюємо запис при необхідності)
+    $userProgress = UserProgress::firstOrCreate(
+            ['user_id' => Auth::id()],
+            ['hearts' => 5, 'points' => 0]
+        );
+    $userProgress = $this->normalizeUserProgress($userProgress);
         if ($request->completed) {
-            $userProgress = UserProgress::where('user_id', Auth::id())->first();
-            
-            if ($userProgress) {
-                $userProgress->points += 10;
-                $userProgress->save();
-            }
+            $userProgress->points += 10;
+            $userProgress->save();
         }
         
-        return $this->sendResponse($progress, 'Challenge progress updated successfully.');
+        return $this->sendResponse([
+            'progress' => $progress,
+            'points' => $userProgress?->points,
+            'hearts' => $userProgress?->hearts,
+        ], 'Challenge progress updated successfully.');
     }
 
     /**
@@ -148,19 +219,19 @@ class ProgressController extends BaseApiController
             return $this->sendError('Challenge not found.');
         }
         
-        $userProgress = UserProgress::where('user_id', Auth::id())->first();
-        
-        if (!$userProgress) {
-            return $this->sendError('User progress not found.');
-        }
+    $userProgress = UserProgress::firstOrCreate(
+            ['user_id' => Auth::id()],
+            ['hearts' => 5, 'points' => 0]
+        );
+    $userProgress = $this->normalizeUserProgress($userProgress);
         
         // Перевіряємо, чи є життя
-        if ($userProgress->hearts <= 0) {
+    if ((int)$userProgress->hearts <= 0) {
             return $this->sendError('No hearts left.', [], 403);
         }
         
         // Зменшуємо кількість життів
-        $userProgress->hearts -= 1;
+    $userProgress->hearts = max(0, (int)$userProgress->hearts - 1);
         $userProgress->save();
         
         return $this->sendResponse($userProgress, 'Hearts reduced successfully.');
@@ -173,19 +244,20 @@ class ProgressController extends BaseApiController
      */
     public function refillHearts()
     {
-        $userProgress = UserProgress::where('user_id', Auth::id())->first();
+    $userProgress = UserProgress::where('user_id', Auth::id())->first();
         
         if (!$userProgress) {
             return $this->sendError('User progress not found.');
         }
+    $userProgress = $this->normalizeUserProgress($userProgress);
         
         // Перевіряємо чи повний запас життів
-        if ($userProgress->hearts >= 5) {
+    if ((int)$userProgress->hearts >= 5) {
             return $this->sendError('Hearts are already full.', [], 400);
         }
         
         // Перевіряємо чи достатньо балів (50 балів за одне життя)
-        if ($userProgress->points < 50) {
+    if ((int)$userProgress->points < 50) {
             return $this->sendError('Not enough points.', [], 400);
         }
         

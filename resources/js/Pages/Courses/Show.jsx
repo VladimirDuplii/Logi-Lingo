@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Head } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Courses } from '@/Components';
@@ -6,27 +6,54 @@ import { Courses } from '@/Components';
 const CourseDetailsPage = ({ auth, course }) => {
     const [selectedUnit, setSelectedUnit] = useState(null);
     const [selectedLesson, setSelectedLesson] = useState(null);
+    const [useDuoView, setUseDuoView] = useState(true);
+
+    // If user came with ?start=1, auto-select first unit/lesson when available
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const url = new URL(window.location.href);
+        const shouldStart = url.searchParams.get('start') === '1';
+        if (shouldStart && course?.units?.length && !selectedUnit && !selectedLesson) {
+            const u = course.units.find((u) => Array.isArray(u.lessons) && u.lessons.length > 0) || course.units[0];
+            setSelectedUnit(u);
+            if (u?.lessons?.length) {
+                setSelectedLesson(u.lessons[0]);
+            }
+        }
+    }, [course, selectedUnit, selectedLesson]);
 
     const handleUnitSelect = (unit) => {
         setSelectedUnit(unit);
         setSelectedLesson(null);
     };
 
-    const handleLessonSelect = (lesson) => {
+    const handleLessonSelect = (lesson, unit) => {
+        if (unit) setSelectedUnit(unit);
         setSelectedLesson(lesson);
     };
 
     const renderContent = () => {
         if (selectedLesson) {
             return (
-                <Courses.QuestionList 
-                    courseId={course.id} 
+                <Courses.DuoLesson
+                    courseId={course.id}
                     unitId={selectedUnit.id}
                     lessonId={selectedLesson.id}
+                    onExit={() => setSelectedLesson(null)}
                 />
             );
         }
-        
+
+        if (useDuoView) {
+            return (
+                <Courses.DuoLearn
+                    course={course}
+                    onUnitSelect={handleUnitSelect}
+                    onLessonSelect={handleLessonSelect}
+                />
+            );
+        }
+
         if (selectedUnit) {
             return (
                 <Courses.LessonList 
@@ -40,7 +67,9 @@ const CourseDetailsPage = ({ auth, course }) => {
         return (
             <Courses.CourseDetail 
                 courseId={course.id}
+                initialCourse={course}
                 onUnitSelect={handleUnitSelect}
+                onLessonSelect={handleLessonSelect}
             />
         );
     };
@@ -92,6 +121,15 @@ const CourseDetailsPage = ({ auth, course }) => {
                     <h2 className="font-semibold text-xl text-gray-800 leading-tight">
                         {course.title}
                     </h2>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-500">Tree view</span>
+                        <button
+                            className={`rounded-2xl border-2 border-b-4 px-3 py-1 text-sm font-bold ${useDuoView ? 'border-green-600 bg-green-500 text-white' : 'border-gray-300 bg-white text-gray-500'}`}
+                            onClick={() => setUseDuoView((x) => !x)}
+                        >
+                            {useDuoView ? 'ON' : 'OFF'}
+                        </button>
+                    </div>
                     <nav className="flex" aria-label="Breadcrumb">
                         <ol className="inline-flex items-center space-x-1 md:space-x-3">
                             {breadcrumbs.map((breadcrumb, index) => (

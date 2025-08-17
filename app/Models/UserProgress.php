@@ -8,6 +8,11 @@ use Illuminate\Database\Eloquent\Model;
 class UserProgress extends Model
 {
     use HasFactory;
+    // The table name and PK differ from Laravel's defaults
+    protected $table = 'user_progress';
+    protected $primaryKey = 'user_id';
+    public $incrementing = false;
+    protected $keyType = 'int';
     
     protected $fillable = [
         'user_id',

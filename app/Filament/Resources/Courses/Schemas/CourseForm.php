@@ -15,7 +15,10 @@ class CourseForm
                 TextInput::make('title')
                     ->required(),
                 FileUpload::make('image_src')
+                    ->disk('public')
                     ->image()
+                    ->directory('courses')
+                    ->visibility('public')
                     ->required(),
             ]);
     }

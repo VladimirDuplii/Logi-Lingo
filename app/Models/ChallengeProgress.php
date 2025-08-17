@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class ChallengeProgress extends Model
 {
     use HasFactory;
+    protected $table = 'challenge_progress';
     
     protected $fillable = [
         'user_id',

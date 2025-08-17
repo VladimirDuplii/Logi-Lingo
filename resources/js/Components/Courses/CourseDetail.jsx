@@ -2,18 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { CourseService } from '../../Services';
 import UnitList from './UnitList';
 
-const CourseDetail = ({ courseId, onUnitSelect }) => {
-    const [course, setCourse] = useState(null);
+const CourseDetail = ({ courseId, initialCourse, onUnitSelect, onLessonSelect }) => {
+    const [course, setCourse] = useState(initialCourse || null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [starting, setStarting] = useState(false);
 
     useEffect(() => {
         const fetchCourseDetails = async () => {
+            // If we already have initial course from server, don't refetch
+            if (initialCourse) {
+                setLoading(false);
+                return;
+            }
             if (!courseId) return;
-            
             try {
                 const response = await CourseService.getCourseById(courseId);
-                setCourse(response.data.data);
+                console.log('Course API response:', response); // Debug log
+                // Перевіряємо всі можливі структури відповіді
+                const courseData = response.data && response.data.data 
+                    ? response.data.data 
+                    : response.data;
+                setCourse(courseData);
             } catch (err) {
                 setError('Failed to load course details. Please try again later.');
                 console.error('Error fetching course details:', err);
@@ -23,7 +33,7 @@ const CourseDetail = ({ courseId, onUnitSelect }) => {
         };
 
         fetchCourseDetails();
-    }, [courseId]);
+    }, [courseId, initialCourse]);
 
     if (loading) {
         return <div className="loading">Loading course details...</div>;
@@ -46,11 +56,30 @@ const CourseDetail = ({ courseId, onUnitSelect }) => {
                     <span className="course-level">Level: {course.level}</span>
                     <span className="course-units-count">Units: {course.units_count}</span>
                 </div>
+                <div className="mt-4">
+                    <button
+                        className="inline-flex items-center justify-center rounded-full bg-green-500 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                        onClick={() => {
+                            if (!course?.units?.length) return;
+                            setStarting(true);
+                            const firstUnit = (course.units.find(u => Array.isArray(u.lessons) && u.lessons.length > 0) || course.units[0]);
+                            if (onUnitSelect) onUnitSelect(firstUnit);
+                            setStarting(false);
+                        }}
+                        disabled={starting || !course?.units?.length}
+                    >
+                        Почати навчання
+                    </button>
+                    {!course?.units?.some(u => Array.isArray(u.lessons) && u.lessons.length > 0) && (
+                        <p className="mt-2 text-sm text-gray-600">У першого розділу немає уроків. Оберіть інший розділ нижче.</p>
+                    )}
+                </div>
             </div>
             
             <UnitList 
                 courseId={courseId} 
-                onUnitSelect={onUnitSelect} 
+                onUnitSelect={onUnitSelect}
+                onLessonSelect={onLessonSelect}
                 units={course.units || []}
             />
         </div>

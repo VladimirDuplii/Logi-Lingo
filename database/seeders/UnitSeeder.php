@@ -110,7 +110,17 @@ class UnitSeeder extends Seeder
 
         // Додаємо всі розділи до бази даних
         foreach (array_merge($mathUnits, $ukrainianUnits, $logicUnits) as $unit) {
-            Unit::create($unit);
+            Unit::updateOrCreate(
+                [
+                    'course_id' => $unit['course_id'],
+                    'title' => $unit['title'],
+                ],
+                [
+                    'description' => $unit['description'] ?? null,
+                    'order' => $unit['order'] ?? 0,
+                    'updated_at' => now(),
+                ] + (isset($unit['created_at']) ? [] : ['created_at' => now()])
+            );
         }
     }
 }

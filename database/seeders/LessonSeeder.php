@@ -101,7 +101,16 @@ class LessonSeeder extends Seeder
 
         // Додаємо всі уроки до бази даних
         foreach (array_merge($mathLessons, $ukrainianLessons, $logicLessons) as $lesson) {
-            Lesson::create($lesson);
+            Lesson::updateOrCreate(
+                [
+                    'unit_id' => $lesson['unit_id'],
+                    'title' => $lesson['title'],
+                ],
+                [
+                    'order' => $lesson['order'],
+                    'updated_at' => now(),
+                ] + (isset($lesson['created_at']) ? [] : ['created_at' => now()])
+            );
         }
     }
 }

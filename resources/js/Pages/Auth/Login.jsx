@@ -5,7 +5,7 @@ import InputLabel from '@/Components/InputLabel';
 import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { AuthService } from '@/Services';
 
 export default function Login({ status, canResetPassword }) {
@@ -43,8 +43,18 @@ export default function Login({ status, canResetPassword }) {
             
             // Після успішного входу перенаправляємо на дашборд
             if (response.success) {
+                // Створюємо також веб-сесію для доступу до захищених Inertia-сторінок
+                try {
+                    await AuthService.webLogin({
+                        email: data.email,
+                        password: data.password,
+                        remember: data.remember,
+                    });
+                } catch (_) {
+                    // even if web session fails, proceed with token flow
+                }
                 setLoginStatus('Успішний вхід. Перенаправлення...');
-                window.location.href = '/dashboard';
+                router.visit('/dashboard');
             }
         } catch (error) {
             // Обробляємо помилки від API

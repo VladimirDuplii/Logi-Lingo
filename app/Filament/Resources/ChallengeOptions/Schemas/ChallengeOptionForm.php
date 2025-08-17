@@ -28,8 +28,10 @@ class ChallengeOptionForm
                     ->required(),
                 TextInput::make('audio_src'),
                 FileUpload::make('image_src')
+                    ->disk('public')
                     ->image()
-                    ->directory('challenge-options'),
+                    ->directory('challenge-options')
+                    ->visibility('public'),
             ]);
     }
 }

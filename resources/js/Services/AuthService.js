@@ -1,4 +1,5 @@
 import apiClient, { setAuthToken, setupCsrf } from './ApiService';
+import axios from 'axios';
 
 const AuthService = {
     // Register a new user
@@ -37,6 +38,23 @@ const AuthService = {
             return response.data;
         } catch (error) {
             console.error('Login error:', error);
+            throw error;
+        }
+    },
+
+    // Establish Laravel web session (for Inertia protected routes)
+    webLogin: async (credentials) => {
+        try {
+            // Ensure CSRF cookie is set and send cookies with the request
+            await setupCsrf();
+            await axios.post('/login', {
+                email: credentials.email,
+                password: credentials.password,
+                remember: !!credentials.remember,
+            }, { withCredentials: true });
+            return { success: true };
+        } catch (error) {
+            console.error('Web session login error:', error);
             throw error;
         }
     },
