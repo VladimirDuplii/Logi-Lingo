@@ -48,6 +48,38 @@ A single, living list to coordinate work. Update via PRs/commits; reference IDs 
   - Acceptance: Display earned badges; placeholder for locked ones.
   - Priority: P3, Type: feat
 
+// Proposed enhancements
+
+- [LEARN-012] Active/complete tile animations (like reference)
+  - Why: Clearer state and delight.
+  - Acceptance: ACTIVE tiles pulse subtly; COMPLETE tiles show a check overlay; LOCKED remain gray. No layout shift.
+  - Files: `resources/js/Components/Courses/DuoTile.jsx`, `DuoLearn.jsx` (classNames/animations)
+  - Priority: P2, Type: polish
+
+- [DASH-020] Inline hearts refill on dashboard header (+ sync with lessons)
+  - Why: Faster recovery flow when out of hearts.
+  - Acceptance: “Відновити життя (-50 ⚡)” on Dashboard updates hearts/points instantly and is reflected in lesson overlay if open.
+  - Files/Endpoints: `Dashboard.jsx` + `ProgressService.refillHearts()` (already exists)
+  - Priority: P1, Type: feat
+
+- [UX-015] Toast notifications for refill/results/errors
+  - Why: Consistent feedback.
+  - Acceptance: Standard success/error toasts for refill, progress updates, and failures (401/400).
+  - Files: shared toast utility or lightweight component; used in Dashboard/DuoLesson
+  - Priority: P2, Type: ux
+
+- [MEDIA-010] Image lazy-loading and fallback placeholders
+  - Why: Performance and resilience if a file is missing.
+  - Acceptance: All lesson/option images use loading="lazy" and onError fallback (placeholder icon).
+  - Files: `DuoLesson.jsx` (MC + WriteIn), `CourseCard.jsx`
+  - Priority: P3, Type: polish
+
+- [PROGRESS-030] Auto-refresh Learn tree after lesson completion
+  - Why: Immediate unlock without manual reload.
+  - Acceptance: After lesson completion, navigate back to course with a param (e.g., ?refresh=1) or trigger a tree refetch so the next tile becomes ACTIVE instantly.
+  - Files: `DuoLesson.jsx` (onExit), `DuoLearn.jsx` (refetch hook)
+  - Priority: P2, Type: ux
+
 ## In Progress
 
 - (empty)
