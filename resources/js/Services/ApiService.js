@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+const isViteDev = (typeof window !== 'undefined') && window.location && window.location.port === '5173';
+const apiBaseURL = isViteDev ? 'http://127.0.0.1:8000/api/v1' : '/api/v1';
+
 const apiClient = axios.create({
-    baseURL: '/api/v1',
+    baseURL: apiBaseURL,
     headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
@@ -13,7 +16,8 @@ const apiClient = axios.create({
 
 export const setupCsrf = async () => {
     try {
-        await axios.get('/sanctum/csrf-cookie', { withCredentials: true });
+    const base = isViteDev ? 'http://127.0.0.1:8000' : '';
+    await axios.get(`${base}/sanctum/csrf-cookie`, { withCredentials: true });
     } catch (error) {
         console.error('CSRF error:', error);
     }
