@@ -37,6 +37,12 @@ class AuthController extends BaseApiController
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
+        // Initialize user_progress for new user (5 hearts, 0 points)
+        \App\Models\UserProgress::firstOrCreate(
+            ['user_id' => $user->id],
+            ['hearts' => 5, 'points' => 0]
+        );
+
         $data = [
             'user' => $user,
             'access_token' => $token,

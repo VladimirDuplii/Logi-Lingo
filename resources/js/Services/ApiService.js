@@ -7,8 +7,8 @@ const apiClient = axios.create({
         'Accept': 'application/json',
         'X-Requested-With': 'XMLHttpRequest',
     },
-    // For bearer token auth we don't need cookies
-    withCredentials: false,
+    // Allow Laravel Sanctum cookie-based auth to work in addition to Bearer token
+    withCredentials: true,
 });
 
 export const setupCsrf = async () => {

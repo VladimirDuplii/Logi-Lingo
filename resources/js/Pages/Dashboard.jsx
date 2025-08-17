@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { setAuthToken } from '@/Services/ApiService';
 import { CourseService, ProgressService } from '@/Services';
 import { Courses, Progress } from '@/Components';
 
@@ -30,8 +31,10 @@ export default function Dashboard({ auth }) {
             return;
         }
 
-        const fetchDashboardData = async () => {
+    const fetchDashboardData = async () => {
             try {
+        // Ensure no stale Bearer token from a previous user is used
+        try { setAuthToken(null); } catch (_) { /* noop */ }
                 // 1) Fetch user progress (hearts/points/active course)
                 const up = await ProgressService.getUserProgress();
                 const upData = up?.data || up?.userProgress || null;
