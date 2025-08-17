@@ -38,6 +38,54 @@ class ProgressController extends BaseApiController
     }
 
     /**
+     * Зарахувати бали за проходження уроку
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $lessonId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function completeLesson(Request $request, $lessonId)
+    {
+        $validator = Validator::make($request->all(), [
+            'correct' => 'required|integer|min:0',
+            'total' => 'required|integer|min:1',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->sendError('Validation Error.', $validator->errors()->toArray(), 422);
+        }
+
+        $lesson = Lesson::find($lessonId);
+        if (is_null($lesson)) {
+            return $this->sendError('Lesson not found.');
+        }
+
+        $userProgress = UserProgress::firstOrCreate(
+            ['user_id' => Auth::id()],
+            ['hearts' => 5, 'points' => 0]
+        );
+
+        // Completion bonus only (per-challenge XP is handled in updateChallengeProgress)
+        $correct = (int) $request->integer('correct');
+        $total = (int) $request->integer('total');
+
+        // Base completion bonus + flawless bonus
+        $xp = 10;
+        if ($total > 0 && $correct === $total) {
+            $xp += 10; // flawless bonus
+        }
+
+        $userProgress->points += $xp;
+        $userProgress->save();
+
+        return $this->sendResponse([
+            'awarded_xp' => $xp,
+            'points' => $userProgress->points,
+            'hearts' => $userProgress->hearts,
+        ], 'Lesson completed and points awarded.');
+    }
+
+    /**
      * Отримати прогрес користувача за конкретним курсом
      *
      * @param  int  $courseId

@@ -5,6 +5,8 @@ import UnitList from './UnitList';
 import LessonList from './LessonList';
 import QuestionList from './QuestionList';
 import QuestionItem from './QuestionItem';
+import DuoLearn from './DuoLearn';
+import DuoLesson from './DuoLesson';
 
 export {
     CourseList,
@@ -13,5 +15,7 @@ export {
     UnitList,
     LessonList,
     QuestionList,
-    QuestionItem
+    QuestionItem,
+    DuoLearn,
+    DuoLesson
 };

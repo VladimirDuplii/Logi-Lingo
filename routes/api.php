@@ -40,6 +40,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/progress', [ProgressController::class, 'getUserProgress']);
         Route::get('/progress/courses/{courseId}', [ProgressController::class, 'getCourseProgress']);
         Route::post('/progress/challenges/{challengeId}', [ProgressController::class, 'updateChallengeProgress']);
+    Route::post('/progress/lessons/{lessonId}/complete', [ProgressController::class, 'completeLesson']);
         Route::post('/progress/hearts/reduce/{challengeId}', [ProgressController::class, 'reduceHearts']);
         Route::post('/progress/hearts/refill', [ProgressController::class, 'refillHearts']);
     });
