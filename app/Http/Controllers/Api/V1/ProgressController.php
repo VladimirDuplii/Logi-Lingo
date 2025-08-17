@@ -96,10 +96,25 @@ class ProgressController extends BaseApiController
         $userProgress->points += $xp;
         $userProgress->save();
 
+        // Mark all challenges in this lesson as completed for this user to unlock the next lesson
+        $challengeIds = $lesson->challenges()->pluck('id');
+        foreach ($challengeIds as $cid) {
+            ChallengeProgress::updateOrCreate(
+                [
+                    'user_id' => Auth::id(),
+                    'challenge_id' => $cid,
+                ],
+                [
+                    'completed' => true,
+                ]
+            );
+        }
+
         return $this->sendResponse([
             'awarded_xp' => $xp,
             'points' => $userProgress->points,
             'hearts' => $userProgress->hearts,
+            'lesson_completed' => true,
         ], 'Lesson completed and points awarded.');
     }
 

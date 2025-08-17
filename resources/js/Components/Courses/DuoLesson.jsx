@@ -262,6 +262,7 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
   const [correctCount, setCorrectCount] = useState(0);
   const [incorrectCount, setIncorrectCount] = useState(0);
   const [hearts, setHearts] = useState(null);
+  const [noHearts, setNoHearts] = useState(false);
   // Keep this state before any early returns to preserve hook order
   const [completed, setCompleted] = useState(false);
   const [awardedXp, setAwardedXp] = useState(null);
@@ -279,6 +280,7 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
           const p = await ProgressService.getUserProgress();
           const heartsVal = p?.data?.hearts ?? p?.hearts ?? null;
           setHearts(typeof heartsVal === 'number' ? heartsVal : null);
+          if ((heartsVal ?? 0) <= 0) setNoHearts(true);
         } catch (_) { /* ignore */ }
       } catch (e) {
         setError('Failed to load questions.');
@@ -344,13 +346,15 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
 
     try {
       await ProgressService.updateChallengeProgress(q.id, correct);
-      if (!correct) {
+    if (!correct) {
         const r = await ProgressService.reduceHearts(q.id);
         const newHearts = r?.data?.hearts ?? r?.hearts;
         if (typeof newHearts === 'number') {
           setHearts(newHearts);
+      if (newHearts <= 0) setNoHearts(true);
         } else {
           setHearts((h) => (typeof h === 'number' ? Math.max(h - 1, 0) : h));
+      setNoHearts((h) => true);
         }
       }
       if (correct) setCorrectCount((c) => c + 1);
@@ -385,10 +389,35 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
     <div className="flex min-h-screen flex-col gap-5 px-4 py-5 sm:px-0 sm:py-0">
   <ProgressBar value={correctCount + incorrectCount} total={totalNeeded} onExit={onExit} hearts={hearts} />
 
-      {mcMode ? (
+      {noHearts && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 text-center shadow-xl">
+            <div className="mb-2 text-2xl font-bold text-rose-600">Немає сердець</div>
+            <p className="mb-4 text-gray-700">Пополни серця, щоб продовжити урок.</p>
+            <div className="flex justify-center gap-3">
+              <button
+                onClick={onExit}
+                className="rounded-full bg-gray-200 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-300"
+              >
+                Вийти
+              </button>
+              <a
+                href="/dashboard"
+                className="rounded-full bg-rose-500 px-4 py-2 font-semibold text-white hover:bg-rose-600"
+              >
+                Поповнити
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {!noHearts && mcMode ? (
         <MultipleChoice question={q} selected={selected} setSelected={setSelected} />
-      ) : (
+      ) : !noHearts ? (
         <WriteIn question={q} selectedIndices={selectedIndices} setSelectedIndices={setSelectedIndices} />
+      ) : (
+        <div className="flex grow items-center justify-center text-gray-500">Серця закінчилися</div>
       )}
 
       <CheckPanel
@@ -396,7 +425,7 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
         isAnswerCorrect={isCorrect}
         correctAnswerShown={correctShown}
         correctAnswer={correctAnswerText}
-        onCheckAnswer={checkAnswer}
+  onCheckAnswer={noHearts ? () => {} : checkAnswer}
         onFinish={next}
         onSkip={() => {
           setIsCorrect(false);
