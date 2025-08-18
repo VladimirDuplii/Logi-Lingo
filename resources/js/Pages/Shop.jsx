@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import DuoLayout from '../Layouts/DuoLayout';
-import ProgressService from '../Services/ProgressService';
-import { useToast } from '../Components/Toast';
+import DuoLayout from '@/Layouts/DuoLayout';
+import RightCourseSidebar from '@/Components/Layout/RightCourseSidebar';
+import ProgressService from '@/Services/ProgressService';
+import { useToast } from '@/Components/Toast';
 
-export default function Shop() {
+export default function Shop({ auth }) {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
 
@@ -21,8 +22,18 @@ export default function Shop() {
   };
 
   return (
-    <DuoLayout rightSidebarEnabled>
-      <div className="mx-auto max-w-2xl p-6">
+    <DuoLayout
+      right={
+        <RightCourseSidebar
+          course={null}
+          hearts={auth?.user?.hearts ?? undefined}
+          points={auth?.user?.points ?? auth?.user?.xp ?? undefined}
+          otherCourses={auth?.user?.courses || []}
+        />
+      }
+      centerMaxClass="xl:max-w-2xl"
+    >
+      <div className="w-full p-6">
         <h1 className="mb-6 text-2xl font-bold">Shop</h1>
         <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between">
