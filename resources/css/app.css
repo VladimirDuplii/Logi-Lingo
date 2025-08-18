@@ -1,5 +1,5 @@
+@import 'question-item.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import 'question-item.css';

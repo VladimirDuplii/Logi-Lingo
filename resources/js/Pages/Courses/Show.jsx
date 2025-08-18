@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { Head } from '@inertiajs/react';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+// AuthenticatedLayout not used; DuoLayout handles the shell
+import DuoLayout from '@/Layouts/DuoLayout';
 import { Courses } from '@/Components';
+import RightCourseSidebar from '@/Components/Layout/RightCourseSidebar';
+// Removed duplicated sidebars; DuoLayout handles left nav and right sidebar
 
 const CourseDetailsPage = ({ auth, course }) => {
     const [selectedUnit, setSelectedUnit] = useState(null);
@@ -32,27 +35,53 @@ const CourseDetailsPage = ({ auth, course }) => {
         setSelectedLesson(lesson);
     };
 
+    // lock body scroll while lesson is open
+    useEffect(() => {
+        if (typeof document === 'undefined') return;
+        if (selectedLesson) {
+            const prev = document.body.style.overflow;
+            document.body.style.overflow = 'hidden';
+            return () => { document.body.style.overflow = prev; };
+        }
+    }, [selectedLesson]);
+
     const renderContent = () => {
         if (selectedLesson) {
             return (
-                <Courses.DuoLesson
-                    courseId={course.id}
-                    unitId={selectedUnit.id}
-                    lessonId={selectedLesson.id}
-                    onExit={() => setSelectedLesson(null)}
-                />
+                <div id="lesson-overlay" className="fixed inset-0 z-[9999] bg-white overflow-auto">
+                    <div id="lesson-container" className="mx-auto max-w-5xl min-h-screen flex flex-col px-4 py-6 sm:px-6">
+                        <Courses.DuoLesson
+                            courseId={course.id}
+                            unitId={selectedUnit.id}
+                            lessonId={selectedLesson.id}
+                            onExit={() => {
+                                setSelectedLesson(null);
+                                // Add a query flag so DuoLearn can refetch progress on mount
+                                if (typeof window !== 'undefined') {
+                                    const url = new URL(window.location.href);
+                                    url.searchParams.set('refresh', '1');
+                                    window.history.replaceState({}, '', url.toString());
+                                }
+                            }}
+                        />
+                    </div>
+                </div>
             );
         }
 
-        if (useDuoView) {
-            return (
-                <Courses.DuoLearn
-                    course={course}
-                    onUnitSelect={handleUnitSelect}
-                    onLessonSelect={handleLessonSelect}
-                />
-            );
-        }
+                if (useDuoView) {
+                    return (
+                        <div className="w-full">
+                            <div id="learn-tree" className="min-w-0 w-full">
+                                <Courses.DuoLearn
+                                    course={course}
+                                    onUnitSelect={handleUnitSelect}
+                                    onLessonSelect={handleLessonSelect}
+                                />
+                            </div>
+                        </div>
+                    );
+                }
 
         if (selectedUnit) {
             return (
@@ -114,68 +143,39 @@ const CourseDetailsPage = ({ auth, course }) => {
     const breadcrumbs = getBreadcrumbs();
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={
-                <div className="flex flex-col space-y-2">
-                    <h2 className="font-semibold text-xl text-gray-800 leading-tight">
-                        {course.title}
-                    </h2>
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-500">Tree view</span>
-                        <button
-                            className={`rounded-2xl border-2 border-b-4 px-3 py-1 text-sm font-bold ${useDuoView ? 'border-green-600 bg-green-500 text-white' : 'border-gray-300 bg-white text-gray-500'}`}
-                            onClick={() => setUseDuoView((x) => !x)}
-                        >
-                            {useDuoView ? 'ON' : 'OFF'}
-                        </button>
-                    </div>
-                    <nav className="flex" aria-label="Breadcrumb">
-                        <ol className="inline-flex items-center space-x-1 md:space-x-3">
-                            {breadcrumbs.map((breadcrumb, index) => (
-                                <li key={index} className="inline-flex items-center">
-                                    {index > 0 && <span className="mx-2 text-gray-400">/</span>}
-                                    <a
-                                        href={breadcrumb.href}
-                                        className={`inline-flex items-center text-sm font-medium ${
-                                            breadcrumb.current 
-                                                ? 'text-gray-800 cursor-default' 
-                                                : 'text-blue-600 hover:text-blue-700'
-                                        }`}
-                                        onClick={(e) => {
-                                            if (index === 0) {
-                                                // Allow normal navigation to courses page
-                                            } else if (index === 1) {
-                                                e.preventDefault();
-                                                setSelectedUnit(null);
-                                                setSelectedLesson(null);
-                                            } else {
-                                                e.preventDefault();
-                                                // Don't do anything on the current level
-                                            }
-                                        }}
-                                    >
-                                        {breadcrumb.name}
-                                    </a>
-                                </li>
-                            ))}
-                        </ol>
-                    </nav>
-                </div>
-            }
-        >
+        <DuoLayout right={selectedLesson ? null : (
+            <RightCourseSidebar
+                course={course}
+                hearts={auth?.user?.hearts ?? undefined}
+                points={auth?.user?.points ?? auth?.user?.xp ?? undefined}
+                otherCourses={(auth?.user?.courses || []).filter((c) => c.id !== course.id)}
+            />
+    )} centerMaxClass="xl:max-w-2xl">
             <Head title={course.title} />
 
-            <div className="py-12">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                        <div className="p-6 text-gray-900">
-                            {renderContent()}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </AuthenticatedLayout>
+                        {selectedLesson ? (
+                // Fullscreen lesson overlay already rendered above via renderContent
+                renderContent()
+            ) : (
+                                <div id="course-page" className="w-full">
+                                    <div id="course-container" className={`mx-auto w-full ${useDuoView ? '' : 'max-w-5xl'}`}>
+                                        <div id="course-header" className="mb-4 flex items-center justify-between">
+                                            <h2 className="font-semibold text-xl text-gray-800 leading-tight">{course.title}</h2>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm text-gray-500">Tree view</span>
+                                                <button
+                                                    className={`rounded-2xl border-2 border-b-4 px-3 py-1 text-sm font-bold ${useDuoView ? 'border-green-600 bg-green-500 text-white' : 'border-gray-300 bg-white text-gray-500'}`}
+                                                    onClick={() => setUseDuoView((x) => !x)}
+                                                >
+                                                    {useDuoView ? 'ON' : 'OFF'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        {renderContent()}
+                                    </div>
+                                </div>
+            )}
+                </DuoLayout>
     );
 };
 

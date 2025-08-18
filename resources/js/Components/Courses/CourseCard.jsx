@@ -31,7 +31,13 @@ const CourseCard = ({ course, onClick }) => {
             <div className="flex items-center gap-4 p-5">
                 <div className="h-14 w-14 flex items-center justify-center rounded-2xl bg-gradient-to-br from-green-400 to-green-500 text-white text-2xl font-bold shadow-inner">
                     {course.image_url ? (
-                        <img className="h-14 w-14 rounded-2xl object-cover" src={course.image_url} alt={course.title} />
+                        <img
+                            className="h-14 w-14 rounded-2xl object-cover"
+                            src={course.image_url}
+                            alt={course.title}
+                            loading="lazy"
+                            onError={(e) => { e.currentTarget.src = 'data:image/svg+xml,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'56\' height=\'56\'><rect width=\'100%\' height=\'100%\' fill=\'%23e5e7eb\'/></svg>'; }}
+                        />
                     ) : (
                         <span aria-hidden>{course.title?.charAt(0) || 'C'}</span>
                     )}

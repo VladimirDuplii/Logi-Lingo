@@ -46,7 +46,7 @@ const getTileLeftClassName = ({ index, unitNumber, tilesLength }) => {
 
 const DuoUnitHeader = ({ unitNumber, description, backgroundColor = 'bg-[#58cc02]', borderColor = 'border-[#46a302]' }) => {
     return (
-        <article className={["max-w-2xl text-white sm:rounded-xl", backgroundColor].join(' ')}>
+    <article className={["w-full text-white sm:rounded-xl", backgroundColor].join(' ')}>
             <header className="flex items-center justify-between gap-4 p-4">
                 <div className="flex flex-col gap-1">
                     <h2 className="text-2xl font-bold">Unit {unitNumber}</h2>
@@ -71,7 +71,7 @@ const DuoUnitSection = ({ unit, onStartLesson, completedCount }) => {
     return (
         <>
             <DuoUnitHeader unitNumber={unit.unitNumber} description={unit.description} backgroundColor={unit.backgroundColor} borderColor={unit.borderColor} />
-            <div className="relative mb-8 mt-[20px] flex max-w-2xl flex-col items-center gap-4">
+            <div className="relative mb-8 mt-[20px] flex flex-col items-center gap-4">
                 {unit.tiles.map((tile, i) => {
                     const flatIndex = i; // since per unit mapping
                     const status = computeTileStatus(flatIndex, completedCount, 1);
@@ -133,6 +133,33 @@ const DuoLearn = ({ course, onUnitSelect, onLessonSelect }) => {
             }
         })();
         return () => { mounted = false; };
+    }, [course?.id]);
+
+    // Auto-refresh when ?refresh=1 is present
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const url = new URL(window.location.href);
+        const shouldRefresh = url.searchParams.get('refresh') === '1';
+        if (!shouldRefresh) return;
+        (async () => {
+            try {
+                if (!course?.id) return;
+                const cp = await ProgressService.getCourseProgress(course.id);
+                const unitsData = cp?.data || [];
+                const byUnit = {};
+                unitsData.forEach((u) => {
+                    const lessons = Array.isArray(u?.lessons) ? u.lessons : [];
+                    byUnit[u.id] = lessons.filter((l) => !!l?.completed).length;
+                });
+                setCompletedByUnit(byUnit);
+            } catch (_) {
+                /* noop */
+            } finally {
+                // Clear flag so it doesn't repeat
+                url.searchParams.delete('refresh');
+                window.history.replaceState({}, '', url.toString());
+            }
+        })();
     }, [course?.id]);
 
     return (

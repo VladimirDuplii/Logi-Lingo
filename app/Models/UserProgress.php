@@ -21,6 +21,7 @@ class UserProgress extends Model
         'user_image_src',
         'hearts',
         'points',
+    'daily_goal_xp',
     ];
     
     public function user()

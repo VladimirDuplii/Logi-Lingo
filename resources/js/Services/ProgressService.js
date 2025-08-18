@@ -121,6 +121,28 @@ const ProgressService = {
             console.error("Error refilling hearts:", error);
             throw error;
         }
+    },
+
+    // Daily quests summary
+    getDailyQuests: async () => {
+        try {
+            const response = await apiClient.get('/progress/daily');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching daily quests:', error);
+            throw error;
+        }
+    },
+
+    // Update daily XP goal
+    updateDailyGoal: async (dailyGoalXp) => {
+        try {
+            const response = await apiClient.post('/progress/daily-goal', { daily_goal_xp: dailyGoalXp });
+            return response.data;
+        } catch (error) {
+            console.error('Error updating daily goal:', error);
+            throw error;
+        }
     }
 };
 

@@ -1,11 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Head, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import DuoLayout from '@/Layouts/DuoLayout';
 import { setAuthToken } from '@/Services/ApiService';
 import { CourseService, ProgressService } from '@/Services';
 import { Courses, Progress } from '@/Components';
+import { useToast } from '@/Components/Toast';
 
 export default function Dashboard({ auth }) {
+    const toast = useToast();
     const [recentCourses, setRecentCourses] = useState([]);
     const [inProgressCourses, setInProgressCourses] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -133,13 +136,21 @@ export default function Dashboard({ auth }) {
         window.location.href = '/courses';
     };
 
+    const [refilling, setRefilling] = useState(false);
     const handleRefill = async () => {
         try {
+            setRefilling(true);
             const res = await ProgressService.refillHearts();
             const data = res?.data || res;
-            if (data) setUserProgress((prev) => ({ ...(prev || {}), ...data }));
+            if (data) {
+                setUserProgress((prev) => ({ ...(prev || {}), ...data }));
+                toast?.success?.('Життя відновлено!');
+            }
         } catch (e) {
-            // non-blocking; could show toast
+            const msg = e?.response?.data?.message || 'Не вдалося відновити життя';
+            toast?.error?.(msg);
+        } finally {
+            setRefilling(false);
         }
     };
 
@@ -151,10 +162,7 @@ export default function Dashboard({ auth }) {
     // If not authenticated, show login button
     if (!authenticated) {
         return (
-            <AuthenticatedLayout
-                user={auth.user}
-                header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Dashboard</h2>}
-            >
+            <DuoLayout>
                 <Head title="Dashboard" />
 
                 <div className="py-12">
@@ -170,15 +178,12 @@ export default function Dashboard({ auth }) {
                         </div>
                     </div>
                 </div>
-            </AuthenticatedLayout>
+            </DuoLayout>
         );
     }
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-        header={<h2 className="font-semibold text-xl text-gray-800 leading-tight">Dashboard</h2>}
-        >
+        <DuoLayout>
             <Head title="Dashboard" />
 
             <div className="py-12">
@@ -202,7 +207,7 @@ export default function Dashboard({ auth }) {
                     ) : (
                         <>
                             {/* Duo-style header: avatar, hearts, points */}
-                            <div className={`overflow-hidden sm:rounded-2xl bg-white shadow-sm ring-1 ring-gray-100 mb-6 transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+                            <div id="dash-header" className={`overflow-hidden sm:rounded-2xl bg-white shadow-sm ring-1 ring-gray-100 mb-6 transition-all duration-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
                                 <div className="p-6">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-4">
@@ -226,12 +231,13 @@ export default function Dashboard({ auth }) {
                                                     <span key={i} className={`text-sm ${i < hearts ? 'opacity-100' : 'opacity-30'}`}>❤</span>
                                                 ))}
                                             </div>
-                                            {canRefill && (
+                        {canRefill && (
                                                 <button
                                                     onClick={handleRefill}
-                                                    className="rounded-full bg-rose-500 px-3 py-1 text-sm font-semibold text-white shadow hover:bg-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2"
+                            disabled={refilling}
+                            className={`rounded-full px-3 py-1 text-sm font-semibold text-white shadow focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 ${refilling ? 'bg-rose-300 cursor-not-allowed' : 'bg-rose-500 hover:bg-rose-600'}`}
                                                 >
-                                                    Відновити життя (-50 ⚡)
+                            {refilling ? 'Виконується…' : 'Відновити життя (-50 ⚡)'}
                                                 </button>
                                             )}
                                         </div>
@@ -240,7 +246,7 @@ export default function Dashboard({ auth }) {
                             </div>
 
                             {/* Continue card */}
-                            <div className={`overflow-hidden sm:rounded-2xl bg-white shadow-sm ring-1 ring-gray-100 mb-6 transition-all duration-500 delay-100 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+                            <div id="dash-continue" className={`overflow-hidden sm:rounded-2xl bg-white shadow-sm ring-1 ring-gray-100 mb-6 transition-all duration-500 delay-100 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
                                 <div className="p-6 flex items-center justify-between">
                                     <div className="min-w-0">
                                         <div className="text-sm text-gray-500 mb-1">Активний курс</div>
@@ -291,7 +297,7 @@ export default function Dashboard({ auth }) {
 
                             {/* In Progress Courses */}
                             {inProgressCourses.length > 0 && (
-                                <div className={`overflow-hidden sm:rounded-2xl bg-white shadow-sm ring-1 ring-gray-100 mb-6 transition-all duration-500 delay-150 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+                                <div id="dash-in-progress" className={`overflow-hidden sm:rounded-2xl bg-white shadow-sm ring-1 ring-gray-100 mb-6 transition-all duration-500 delay-150 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
                                     <div className="p-6 text-gray-900">
                                         <div className="flex justify-between items-center mb-4">
                                             <h3 className="text-lg font-semibold">Продовжити навчання</h3>
@@ -311,7 +317,7 @@ export default function Dashboard({ auth }) {
 
                             {/* Recent Courses */}
                             {recentCourses.length > 0 && (
-                                <div className={`overflow-hidden sm:rounded-2xl bg-white shadow-sm ring-1 ring-gray-100 transition-all duration-500 delay-200 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+                                <div id="dash-recent" className={`overflow-hidden sm:rounded-2xl bg-white shadow-sm ring-1 ring-gray-100 transition-all duration-500 delay-200 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
                                     <div className="p-6 text-gray-900">
                                         <div className="flex justify-between items-center mb-4">
                                             <h3 className="text-lg font-semibold">Нещодавні курси</h3>
@@ -347,6 +353,6 @@ export default function Dashboard({ auth }) {
                     )}
                 </div>
             </div>
-        </AuthenticatedLayout>
+    </DuoLayout>
     );
 }

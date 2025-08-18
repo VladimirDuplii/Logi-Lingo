@@ -51,6 +51,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/progress', function () {
         return Inertia::render('Progress/Index');
     })->name('progress.index');
+
+    // Settings - Coach (Daily Goal)
+    Route::get('/settings/coach', function () {
+        return Inertia::render('Settings/Coach');
+    })->name('settings.coach');
 });
 
 require __DIR__.'/auth.php';

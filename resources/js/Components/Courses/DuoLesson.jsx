@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CourseService, ProgressService } from '../../Services';
+import { useToast } from '@/Components/Toast';
 
 const Heart = ({ filled }) => (
   <svg width="28" height="23" viewBox="0 0 28 23" fill="none">
@@ -115,6 +116,10 @@ const CheckPanel = ({
 
 const MultipleChoice = ({ question, selected, setSelected }) => {
   const answers = question.options || [];
+  const count = answers.length;
+  // Dynamic grid: 2/3/4 per row on >= sm, allow wrap on base
+  const smCols = count <= 2 ? 'sm:grid-cols-2' : count === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-4';
+  const baseCols = count <= 2 ? 'grid-cols-2' : 'grid-cols-2'; // on very small screens keep 2 per row
   return (
     <section className="flex max-w-2xl grow flex-col gap-5 self-center sm:items-center sm:justify-center sm:gap-24 sm:px-5">
       <h1 className="self-start text-2xl font-bold sm:text-3xl">{question.text}</h1>
@@ -124,10 +129,12 @@ const MultipleChoice = ({ question, selected, setSelected }) => {
             src={question.image_url}
             alt="Question"
             className="max-h-48 w-auto object-contain"
+            loading="lazy"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
         </div>
       ) : null}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup">
+      <div className={`grid ${baseCols} ${smCols} gap-2`} role="radiogroup">
         {answers.map((ans, i) => (
           <div
             key={ans.id}
@@ -142,7 +149,13 @@ const MultipleChoice = ({ question, selected, setSelected }) => {
             onClick={() => setSelected(i)}
           >
             {ans.image_url ? (
-              <img src={ans.image_url} alt="" className="mb-2 h-24 w-full object-contain" />
+              <img
+                src={ans.image_url}
+                alt=""
+                className="mb-2 h-24 w-full object-contain"
+                loading="lazy"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
             ) : null}
             <h2 className="text-center">{ans.text}</h2>
           </div>
@@ -167,6 +180,8 @@ const WriteIn = ({ question, selectedIndices, setSelectedIndices }) => {
             src={question.image_url}
             alt="Question"
             className="max-h-48 w-auto object-contain"
+            loading="lazy"
+            onError={(e) => { e.currentTarget.style.display = 'none'; }}
           />
         </div>
       ) : null}
@@ -212,7 +227,7 @@ const WriteIn = ({ question, selectedIndices, setSelectedIndices }) => {
 
 const LessonComplete = ({ correct, total, onExit, displayXp }) => {
   return (
-    <div className="flex min-h-screen flex-col gap-5 px-4 py-5 sm:px-0 sm:py-0">
+    <div className="flex min-h-screen flex-col gap-5">
       <div className="flex grow flex-col items-center justify-center gap-8 font-bold">
         <h1 className="text-center text-3xl text-yellow-400">Lesson Complete!</h1>
         <div className="flex flex-wrap justify-center gap-5">
@@ -251,6 +266,7 @@ const LessonComplete = ({ correct, total, onExit, displayXp }) => {
 };
 
 const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -285,6 +301,7 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
         } catch (_) { /* ignore */ }
       } catch (e) {
         setError('Failed to load questions.');
+        toast?.error?.('Не вдалося завантажити питання.');
       } finally {
         setLoading(false);
       }
@@ -313,7 +330,10 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
         try {
           const res = await ProgressService.completeLesson(lessonId, correctCount, questions.length);
           const xp = res?.data?.awarded_xp ?? res?.awarded_xp ?? null;
-          if (xp != null) setAwardedXp(xp);
+          if (xp != null) {
+            setAwardedXp(xp);
+            toast?.success?.(`Урок завершено: +${xp} XP`);
+          }
         } catch (_) { /* ignore */ }
       })();
     }
@@ -387,7 +407,7 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
         .join(' ');
 
   return (
-    <div className="flex min-h-screen flex-col gap-5 px-4 py-5 sm:px-0 sm:py-0">
+    <div className="flex min-h-screen flex-col gap-5">
   <ProgressBar value={correctCount + incorrectCount} total={totalNeeded} onExit={onExit} hearts={hearts} />
 
       {noHearts && (
@@ -413,19 +433,24 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
                       if (heartsVal > 0) {
                         setNoHearts(false);
                         setRefillMsg('');
+                        toast?.success?.('Життя відновлено!');
                         return;
                       }
                     }
                     setRefillMsg('Не вдалося поповнити серця.');
+                    toast?.error?.('Не вдалося поповнити серця.');
                   } catch (e) {
                     const status = e?.response?.status;
                     const msg = e?.response?.data?.message || '';
                     if (status === 400 && msg.includes('Not enough points')) {
                       setRefillMsg('Недостатньо очок для поповнення.');
+                      toast?.error?.('Недостатньо очок для поповнення.');
                     } else if (status === 400 && msg.includes('Hearts are already full')) {
                       setRefillMsg('Серця вже повні.');
+                      toast?.info?.('Серця вже повні.');
                     } else {
                       setRefillMsg('Сталася помилка. Спробуй ще раз.');
+                      toast?.error?.('Сталася помилка. Спробуй ще раз.');
                     }
                   }
                 }}

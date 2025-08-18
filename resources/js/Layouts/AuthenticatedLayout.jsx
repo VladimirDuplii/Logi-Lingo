@@ -3,16 +3,19 @@ import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage } from '@inertiajs/react';
+import { ToastProvider } from '@/Components/Toast';
 import { useState } from 'react';
 
-export default function AuthenticatedLayout({ header, children }) {
+export default function AuthenticatedLayout({ header, children, hideChrome = false }) {
     const user = usePage().props.auth.user;
 
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
         useState(false);
 
     return (
+        <ToastProvider>
         <div className="min-h-screen bg-gray-100">
+            {!hideChrome && (
             <nav className="border-b border-gray-100 bg-white">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 justify-between">
@@ -120,7 +123,6 @@ export default function AuthenticatedLayout({ header, children }) {
                         </div>
                     </div>
                 </div>
-
                 <div
                     className={
                         (showingNavigationDropdown ? 'block' : 'hidden') +
@@ -161,8 +163,9 @@ export default function AuthenticatedLayout({ header, children }) {
                     </div>
                 </div>
             </nav>
+            )}
 
-            {header && (
+            {header && !hideChrome && (
                 <header className="bg-white shadow">
                     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
                         {header}
@@ -172,5 +175,6 @@ export default function AuthenticatedLayout({ header, children }) {
 
             <main>{children}</main>
         </div>
+        </ToastProvider>
     );
 }

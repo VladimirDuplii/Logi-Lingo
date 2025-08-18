@@ -82,9 +82,10 @@ export const DuoTileButton = ({
     const radius = 40;
     const circumference = 2 * Math.PI * radius;
     const dash = (pct / 100) * circumference;
+    const anim = status === 'ACTIVE' ? 'animate-pulse' : '';
     return (
         <button
-            className={`relative m-3 rounded-full border-b-8 p-4 ${colors} transition hover:brightness-105`}
+            className={`relative m-3 rounded-full border-b-8 p-4 ${colors} ${anim} transition hover:brightness-105`}
             onClick={onClick}
             disabled={status === 'LOCKED'}
             aria-disabled={status === 'LOCKED'}
@@ -109,6 +110,12 @@ export const DuoTileButton = ({
                     transform={`rotate(-90 ${size/2} ${size/2})`}
                 />
             </svg>
+            {/* COMPLETE overlay check */}
+            {status === 'COMPLETE' && (
+                <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white shadow-md ring-2 ring-white">
+                    <CheckIcon className="h-4 w-4" />
+                </span>
+            )}
             {children}
         </button>
     );

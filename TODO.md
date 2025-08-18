@@ -32,6 +32,15 @@ A single, living list to coordinate work. Update via PRs/commits; reference IDs 
 
 ## Backlog
 
+- [LAYOUT-020] Доробити адаптивність макету (responsive layout polish)
+  - Why: Забезпечити коректну адаптивність DuoLayout: центрування course tree, відступи, та межі сайдбару.
+  - Acceptance:
+    - Горизонтальні відступи для `#main-content` відповідають прикладу на sm/md/lg/xl.
+    - Course tree центрований; обмеження ширини кероване через props (на курсах: `xl:max-w-2xl`).
+    - `#sidebar-right`: min 320px, max 400px на ≥ xl; на < xl ховається/стакається згідно дизайну.
+  - Files: `resources/js/Layouts/DuoLayout.jsx`, `resources/js/Pages/Courses/Show.jsx`
+  - Priority: P2, Type: ux
+
 - [DASH-010] Leaderboard (Top-5 by points)
   - Why: Motivation via competition.
   - Acceptance: List top-5 users by points with avatar/name/points.
@@ -55,6 +64,49 @@ A single, living list to coordinate work. Update via PRs/commits; reference IDs 
   - Acceptance: ACTIVE tiles pulse subtly; COMPLETE tiles show a check overlay; LOCKED remain gray. No layout shift.
   - Files: `resources/js/Components/Courses/DuoTile.jsx`, `DuoLearn.jsx` (classNames/animations)
   - Priority: P2, Type: polish
+
+- [QUEST-100] Інтерактивний пошук скарбу з самоцвітами (Treasure Hunt)
+  - Why: Підвищити мотивацію проходження уроків через мета-гру і відчуття прогресу.
+  - Concept:
+    - Під час розв’язування уроків видаються фрагменти карти-пазлу. Зібравши всі фрагменти — карта показує X (місце копати).
+    - Можна копати й до повної карти: кожна спроба коштує 50 XP (з підтвердженням списання).
+    - Клік/тап по зображенню карти надсилає координати; якщо в межах радіусу X — успіх і нагорода.
+  - Balance/Economy:
+    - 1 безкоштовна спроба на день; далі — 50 XP/спроба; денний ліміт платних спроб.
+    - Pity-механіка: гарантована підказка/успіх після N невдалих спроб.
+    - Дублікати фрагментів конвертуються у “кристали” для підказок.
+    - М’який радіус влучання, щоб уникати фрустрації.
+  - Rewards (rarity):
+    - Звичайні: 15-хв XP boost, +1 серце, монети/кристали.
+    - Рідкісні: косметика (бейджі, рамки профілю, іконки курсу).
+    - Епічні: сезонний трофей/бейдж.
+    - Без pay-to-win: робимо акцент на косметиці та дрібних QoL-бонусах.
+  - Integration:
+    - Синергія з Daily Quests: виконаний XP-гол підвищує шанс підказки.
+    - Стрики: за серії днів — гарантований фрагмент у певні дні.
+  - UX/Anti-abuse:
+    - Підтвердження списання XP; чіткі причини невдачі; кулдаун між спробами.
+    - Серверна валідація координат, rate-limit, лог подій для аналітики.
+    - Мобільний френдлі: великі зони торкання, плавні анімації.
+  - Analytics & A/B:
+    - Метрики: конверсія в першу спробу, середні витрати XP, % зібраних карт, 7/14-day retention.
+    - A/B: ціна спроби, наявність безкоштовної спроби, сила підказок.
+  - Contract (MVP):
+    - Entities: TreasureMap(id, season, pieces=9, targetX,targetY,radius), UserMapProgress(user_id,map_id,owned_pieces[], attempts_today, free_attempts_left, crystals), DigAttempt(id,user_id,map_id,x,y,success,cost_xp).
+    - API:
+      - GET /api/v1/treasure/map/current -> {map, userProgress}
+      - POST /api/v1/treasure/dig {x,y} -> {success, reward?, points, hearts}
+      - GET /api/v1/treasure/rewards -> catalog
+    - UI:
+      - Правий сайдбар: віджет прогресу карти (X/Y, кнопка “Копати”).
+      - Сторінка карти: зображення з інтерактивним кліком, лічильники спроб/XP, історія останніх спроб.
+    - Acceptance:
+      - 1 карта на сезон, 9 фрагментів, 1 безкоштовна спроба/день, далі 50 XP.
+      - Pity після 5 невдалих спроб: гарантія підказки або збільшення радіусу на одну спробу.
+      - Успішна спроба — видача винагороди та лог події; баланс XP/сердець оновлюється в UI.
+  - Priority: P1, Type: feat, Labels: gamification,seasonal
+
+// moved to Done
 
 - [DASH-020] Inline hearts refill on dashboard header (+ sync with lessons)
   - Why: Faster recovery flow when out of hearts.
@@ -91,3 +143,10 @@ A single, living list to coordinate work. Update via PRs/commits; reference IDs 
 ## Done
 
 - [AUTH-100] Sanctum/auth hardening; media/admin fixes; Duolingo-like lesson flow (merged to main)
+ - [DASH-003] Quick actions (Continue, Refill hearts)
+   - Implemented global toast system, wired refill with disabled states and success/error toasts; Continue navigates to next lesson.
+ - [LEARN-013] Грід відповідей = кількості варіантів (2/3/4 в ряд)
+   - MultipleChoice тепер динамічно будує грід: 2/3/4 варіанти в ряд (wrap на малих екранах). File: `DuoLesson.jsx`.
+ - [DASH-002] Course progress aggregation
+   - Dashboard shows completed/total lessons and percent for the active course; zero-safe when no active course.
+   - Помітка: перевірити потім.

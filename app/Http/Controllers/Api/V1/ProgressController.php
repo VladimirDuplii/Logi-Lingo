@@ -9,9 +9,12 @@ use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\Unit;
 use App\Models\UserProgress;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Cache;
 
 class ProgressController extends BaseApiController
 {
@@ -31,6 +34,126 @@ class ProgressController extends BaseApiController
             $progress->save();
         }
         return $progress;
+    }
+
+    /**
+     * Повертає стан щоденних квестів за сьогодні
+     */
+    public function getDaily()
+    {
+        $userId = Auth::id();
+        $today = Carbon::today();
+
+        // Base user points/hearts
+        $userProgress = UserProgress::firstOrCreate(
+            ['user_id' => $userId],
+            ['hearts' => 5, 'points' => 0]
+        );
+        $userProgress = $this->normalizeUserProgress($userProgress);
+
+        // Count answered questions today via ChallengeProgress updated today
+        $answeredToday = ChallengeProgress::where('user_id', $userId)
+            ->where('completed', true)
+            ->whereDate('updated_at', '>=', $today)
+            ->count();
+
+        // Lessons completed today: infer by challenges all-complete updated today per lesson
+        $lessonIds = Lesson::pluck('id');
+        $lessonsCompletedToday = 0;
+        foreach ($lessonIds as $lid) {
+            $total = Challenge::where('lesson_id', $lid)->count();
+            if ($total === 0) continue;
+            $completed = Challenge::where('lesson_id', $lid)
+                ->whereHas('challengeProgress', function($q) use ($userId, $today) {
+                    $q->where('user_id', $userId)
+                      ->where('completed', true)
+                      ->whereDate('updated_at', '>=', $today);
+                })
+                ->count();
+            if ($completed >= $total) {
+                $lessonsCompletedToday++;
+            }
+        }
+
+        // XP earned today: approximate by (completed challenges * 10) + 10 base per flawless lesson today.
+        // Since we don't have a dedicated XP ledger, we can return current points and leave xp_today as null for now.
+        $xpToday = null;
+
+        // Resolve goal even if column does not exist yet (temporary cache fallback)
+        if (Schema::hasColumn('user_progress', 'daily_goal_xp')) {
+            $goal = (int)($userProgress->daily_goal_xp ?? 30);
+        } else {
+            $goal = (int) Cache::get('daily_goal_xp_user_' . $userId, 30);
+        }
+    $quests = [
+            [
+                'key' => 'lesson_1',
+                'title' => 'Complete 1 lesson',
+                'progress' => min(1, $lessonsCompletedToday),
+                'total' => 1,
+                'completed' => $lessonsCompletedToday >= 1,
+            ],
+            [
+                'key' => 'questions_20',
+                'title' => 'Answer 20 questions',
+                'progress' => min(20, $answeredToday),
+                'total' => 20,
+                'completed' => $answeredToday >= 20,
+            ],
+            [
+                'key' => 'xp_30',
+                'title' => 'Earn ' . $goal . ' XP',
+                'progress' => $xpToday ?? 0,
+                'total' => $goal,
+                'completed' => ($xpToday ?? 0) >= $goal,
+            ],
+        ];
+
+        return $this->sendResponse([
+            'quests' => $quests,
+            'points' => (int)$userProgress->points,
+            'hearts' => (int)$userProgress->hearts,
+            'date' => $today->toDateString(),
+            'daily_goal_xp' => $goal,
+        ], 'Daily quests summary');
+    }
+
+    /**
+     * Оновити щоденну ціль користувача (XP)
+     */
+    public function updateDailyGoal(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'daily_goal_xp' => 'required|integer|min:10|max:200',
+        ]);
+        if ($validator->fails()) {
+            return $this->sendError('Validation Error.', $validator->errors()->toArray(), 422);
+        }
+
+        $userId = Auth::id();
+        $value = (int) $request->integer('daily_goal_xp');
+
+        // If the column wasn't migrated yet, avoid 500 and use a cache fallback so UI can work.
+        if (!Schema::hasColumn('user_progress', 'daily_goal_xp')) {
+            Cache::forever('daily_goal_xp_user_' . $userId, $value);
+            return $this->sendResponse([
+                'daily_goal_xp' => $value,
+                'persisted' => false,
+                'note' => 'Temporarily stored in cache. Run migrations to persist to DB.'
+            ], 'Daily goal updated (temporary).');
+        }
+
+        $userProgress = UserProgress::firstOrCreate(
+            ['user_id' => Auth::id()],
+            ['hearts' => 5, 'points' => 0, 'daily_goal_xp' => 30]
+        );
+    $userProgress = $this->normalizeUserProgress($userProgress);
+    $userProgress->daily_goal_xp = $value;
+        $userProgress->save();
+
+        return $this->sendResponse([
+            'daily_goal_xp' => (int)$userProgress->daily_goal_xp,
+        ], 'Daily goal updated successfully.');
     }
     /**
      * Отримати прогрес користувача

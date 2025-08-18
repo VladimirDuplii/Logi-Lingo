@@ -98,3 +98,11 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 ## License
 
 The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+## TODO / Roadmap
+
+- Interactive Treasure Hunt (Gemstones):
+   - While solving lessons, award puzzle map fragments. Collecting all fragments assembles a map with an X marking the exact dig spot.
+   - Users can attempt to dig before completing the full map, but each dig attempt costs 50 XP.
+   - Implement interactive image where users choose a precise spot to dig; success yields a treasure reward with gemstones.
+   - Persist fragments per user, track attempts and XP deductions, and expose APIs + UI to view progress, attempt digs, and claim rewards.
