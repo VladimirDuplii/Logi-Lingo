@@ -56,6 +56,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/settings/coach', function () {
         return Inertia::render('Settings/Coach');
     })->name('settings.coach');
+
+    // Shop (spend gems)
+    Route::get('/shop', function () {
+        return Inertia::render('Shop');
+    })->name('shop');
 });
 
 require __DIR__ . '/auth.php';

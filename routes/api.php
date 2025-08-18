@@ -45,5 +45,6 @@ Route::prefix('v1')->group(function () {
         Route::post('/progress/lessons/{lessonId}/complete', [ProgressController::class, 'completeLesson']);
         Route::post('/progress/hearts/reduce/{challengeId}', [ProgressController::class, 'reduceHearts']);
         Route::post('/progress/hearts/refill', [ProgressController::class, 'refillHearts']);
+    Route::post('/progress/hearts/refill-with-gems', [ProgressController::class, 'refillHeartsWithGems']);
     });
 });

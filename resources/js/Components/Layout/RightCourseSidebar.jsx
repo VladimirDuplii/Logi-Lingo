@@ -278,7 +278,7 @@ export default function RightCourseSidebar({
                         <div className="flex flex-col gap-3">
                             <h2 className="text-xl font-bold text-black">Gems</h2>
                             <p className="text-sm font-normal text-gray-400">You have {dailyMeta.gems || 0} gems.</p>
-                            <a className="uppercase text-blue-400 transition hover:brightness-110" href="/shop">Go to shop</a>
+                            <a className="uppercase text-blue-500 transition hover:brightness-110" href="/shop">Go to shop →</a>
                         </div>
                     </div>
                 </div>

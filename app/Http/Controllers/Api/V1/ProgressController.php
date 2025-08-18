@@ -476,4 +476,42 @@ class ProgressController extends BaseApiController
 
         return $this->sendResponse($userProgress, 'Hearts refilled successfully.');
     }
+
+    /**
+     * Refill hearts using gems currency
+     */
+    public function refillHeartsWithGems()
+    {
+        // Ensure gems column exists
+        if (!Schema::hasColumn('user_progress', 'gems')) {
+            return $this->sendError('Gems feature is not available. Run migrations.', [], 503);
+        }
+
+        $userProgress = UserProgress::where('user_id', Auth::id())->first();
+        if (!$userProgress) {
+            return $this->sendError('User progress not found.');
+        }
+        $userProgress = $this->normalizeUserProgress($userProgress);
+
+        // Already full
+        if ((int) $userProgress->hearts >= 5) {
+            return $this->sendError('Hearts are already full.', [], 400);
+        }
+
+        // Cost to fully refill
+        $cost = 5; // gems
+        if ((int) ($userProgress->gems ?? 0) < $cost) {
+            return $this->sendError('Not enough gems.', [], 400);
+        }
+
+        $userProgress->gems = (int) $userProgress->gems - $cost;
+        $userProgress->hearts = 5;
+        $userProgress->save();
+
+        return $this->sendResponse([
+            'hearts' => (int) $userProgress->hearts,
+            'gems' => (int) $userProgress->gems,
+            'points' => (int) $userProgress->points,
+        ], 'Hearts refilled using gems.');
+    }
 }

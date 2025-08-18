@@ -123,6 +123,17 @@ const ProgressService = {
         }
     },
 
+    // Refill hearts using gems
+    refillHeartsWithGems: async () => {
+        try {
+            const response = await apiClient.post('/progress/hearts/refill-with-gems');
+            return response.data;
+        } catch (error) {
+            console.error('Error refilling hearts with gems:', error);
+            throw error;
+        }
+    },
+
     // Daily quests summary
     getDailyQuests: async () => {
         try {
