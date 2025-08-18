@@ -25,15 +25,21 @@ const CourseList = ({ onCourseSelect }) => {
     }, []);
 
     if (loading) {
-        return <div className="loading">Loading courses...</div>;
+        return (
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {[1,2,3,4,5,6].map(i => (
+                    <div key={i} className="h-48 animate-pulse rounded-2xl bg-white ring-1 ring-gray-100 shadow-sm" />
+                ))}
+            </div>
+        );
     }
 
     if (error) {
-        return <div className="error-message">{error}</div>;
+        return <div className="text-sm text-red-600">{error}</div>;
     }
 
     if (courses.length === 0) {
-        return <div className="no-courses">No courses available at this time.</div>;
+        return <div className="text-sm text-gray-500">No courses available at this time.</div>;
     }
 
     return (

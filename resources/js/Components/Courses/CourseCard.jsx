@@ -20,6 +20,19 @@ const CourseCard = ({ course, onClick }) => {
         router.visit(`/courses/${course.id}?start=1`);
     };
 
+    const colors = [
+        { from: 'from-green-400', to: 'to-emerald-500', ring: 'ring-green-300', hover: 'hover:bg-green-50', pill: 'bg-green-100 text-green-700' },
+        { from: 'from-sky-400', to: 'to-blue-500', ring: 'ring-sky-300', hover: 'hover:bg-sky-50', pill: 'bg-sky-100 text-sky-700' },
+        { from: 'from-purple-400', to: 'to-fuchsia-500', ring: 'ring-purple-300', hover: 'hover:bg-purple-50', pill: 'bg-purple-100 text-purple-700' },
+        { from: 'from-amber-400', to: 'to-orange-500', ring: 'ring-amber-300', hover: 'hover:bg-amber-50', pill: 'bg-amber-100 text-amber-700' },
+    ];
+    const idx = (course?.id ?? 0) % colors.length;
+    const theme = colors[idx];
+    const Icon = () => (
+        <svg viewBox="0 0 24 24" className="h-8 w-8" fill="currentColor" aria-hidden>
+            <path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm1 14.93V13h3.93A8.034 8.034 0 0 1 13 16.93ZM11 13v3.93A8.034 8.034 0 0 1 7.07 13H11Zm0-2H7.07A8.034 8.034 0 0 1 11 7.07V11Zm2 0V7.07A8.034 8.034 0 0 1 16.93 11H13Z"/>
+        </svg>
+    );
     return (
         <div
             className="group relative flex flex-col rounded-2xl bg-white shadow-md ring-1 ring-gray-100 hover:shadow-xl transition-transform hover:-translate-y-0.5 cursor-pointer"
@@ -29,7 +42,8 @@ const CourseCard = ({ course, onClick }) => {
             onKeyDown={(e) => (e.key === "Enter" ? handleView(e) : null)}
         >
             <div className="flex items-center gap-4 p-5">
-                <div className="h-14 w-14 flex items-center justify-center rounded-2xl bg-gradient-to-br from-green-400 to-green-500 text-white text-2xl font-bold shadow-inner">
+                <div className={`h-14 w-14 flex items-center justify-center rounded-2xl bg-gradient-to-br ${theme.from} ${theme.to} text-white text-2xl font-bold shadow-inner`}
+                >
                     {course.image_url ? (
                         <img
                             className="h-14 w-14 rounded-2xl object-cover"
@@ -42,9 +56,7 @@ const CourseCard = ({ course, onClick }) => {
                             }}
                         />
                     ) : (
-                        <span aria-hidden>
-                            {course.title?.charAt(0) || "C"}
-                        </span>
+                        <Icon />
                     )}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -55,10 +67,10 @@ const CourseCard = ({ course, onClick }) => {
                         {course.description}
                     </p>
                     <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-                        <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 font-medium">
+                        <span className={`inline-flex items-center rounded-full ${theme.pill} px-2.5 py-0.5 font-medium`}>
                             {course.level || "Beginner"}
                         </span>
-                        <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 font-medium">
+                        <span className={`inline-flex items-center rounded-full ${theme.pill} px-2.5 py-0.5 font-medium`}>
                             {course.units_count} units
                         </span>
                     </div>
@@ -67,14 +79,14 @@ const CourseCard = ({ course, onClick }) => {
             <div className="flex gap-3 px-5 pb-5">
                 <button
                     onClick={handleStart}
-                    className="inline-flex items-center justify-center rounded-full bg-green-500 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                    className={`inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 ${theme.from.replace('from-','bg-').replace('-400','-500')} hover:brightness-110 focus:ring-${theme.from.split('-')[1]}-500`}
                     aria-label="Start learning"
                 >
                     Почати навчання
                 </button>
                 <button
                     onClick={handleView}
-                    className="inline-flex items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-green-600 ring-1 ring-inset ring-green-300 hover:bg-green-50"
+                    className={`inline-flex items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold ring-1 ring-inset ${theme.ring} ${theme.hover}`}
                 >
                     Переглянути курс
                 </button>

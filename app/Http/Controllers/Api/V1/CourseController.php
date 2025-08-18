@@ -47,7 +47,12 @@ class CourseController extends BaseApiController
      */
     public function index()
     {
-        $courses = Course::all();
+        $courses = Course::withCount('units')->get()->map(function($c){
+            $arr = $c->toArray();
+            $arr['units_count'] = $c->units_count ?? 0;
+            $arr['level'] = $c->level ?? 'Beginner';
+            return $arr;
+        });
 
         // Отримуємо активний курс користувача, якщо він є
         $userProgress = UserProgress::where('user_id', Auth::id())->first();
