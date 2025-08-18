@@ -21,10 +21,10 @@ const CourseCard = ({ course, onClick }) => {
     };
 
     const themes = {
-        blue:   { from: 'from-sky-400',    to: 'to-blue-500',   ring: 'ring-sky-300',    focus: 'focus:ring-sky-500',    hover: 'hover:bg-sky-50',    pill: 'bg-sky-100 text-sky-700',    border: 'border-sky-300',    badge: '🧮', barFrom: 'from-sky-400', barVia: 'via-blue-500', barTo: 'to-indigo-500' },
-        green:  { from: 'from-green-400',  to: 'to-emerald-500', ring: 'ring-green-300',  focus: 'focus:ring-green-500',  hover: 'hover:bg-green-50',  pill: 'bg-green-100 text-green-700',  border: 'border-green-300',  badge: '🧠', barFrom: 'from-green-400', barVia: 'via-emerald-500', barTo: 'to-teal-500' },
-        purple: { from: 'from-purple-400', to: 'to-fuchsia-500', ring: 'ring-purple-300', focus: 'focus:ring-purple-500', hover: 'hover:bg-purple-50', pill: 'bg-purple-100 text-purple-700', border: 'border-purple-300', badge: '📚', barFrom: 'from-purple-400', barVia: 'via-fuchsia-500', barTo: 'to-pink-500' },
-        orange: { from: 'from-amber-400',  to: 'to-orange-500',  ring: 'ring-amber-300',  focus: 'focus:ring-amber-500',  hover: 'hover:bg-amber-50',  pill: 'bg-amber-100 text-amber-700',  border: 'border-amber-300',  badge: '🔬', barFrom: 'from-amber-400', barVia: 'via-orange-500', barTo: 'to-rose-500' },
+        blue:   { from: 'from-sky-400',    to: 'to-blue-500',   ring: 'ring-sky-300',    focus: 'focus:ring-sky-500',    hover: 'hover:bg-sky-50',    pill: 'bg-sky-100 text-sky-700',    border: 'border-sky-300',    badge: '🧮', primaryBg: 'bg-blue-500',   primaryHover: 'hover:bg-blue-600' },
+        green:  { from: 'from-green-400',  to: 'to-emerald-500', ring: 'ring-green-300',  focus: 'focus:ring-green-500',  hover: 'hover:bg-green-50',  pill: 'bg-green-100 text-green-700',  border: 'border-green-300',  badge: '🧠', primaryBg: 'bg-green-500',  primaryHover: 'hover:bg-green-600' },
+        purple: { from: 'from-purple-400', to: 'to-fuchsia-500', ring: 'ring-purple-300', focus: 'focus:ring-purple-500', hover: 'hover:bg-purple-50', pill: 'bg-purple-100 text-purple-700', border: 'border-purple-300', badge: '📚', primaryBg: 'bg-fuchsia-500', primaryHover: 'hover:bg-fuchsia-600' },
+        orange: { from: 'from-amber-400',  to: 'to-orange-500',  ring: 'ring-amber-300',  focus: 'focus:ring-amber-500',  hover: 'hover:bg-amber-50',  pill: 'bg-amber-100 text-amber-700',  border: 'border-amber-300',  badge: '🔬', primaryBg: 'bg-orange-500', primaryHover: 'hover:bg-orange-600' },
     };
     const pickTheme = (c) => {
         const title = (c?.title || '').toLowerCase();
@@ -42,6 +42,53 @@ const CourseCard = ({ course, onClick }) => {
             <path d="M12 2a10 10 0 1 0 10 10A10.011 10.011 0 0 0 12 2Zm1 14.93V13h3.93A8.034 8.034 0 0 1 13 16.93ZM11 13v3.93A8.034 8.034 0 0 1 7.07 13H11Zm0-2H7.07A8.034 8.034 0 0 1 11 7.07V11Zm2 0V7.07A8.034 8.034 0 0 1 16.93 11H13Z"/>
         </svg>
     );
+    // Lightweight confetti without external deps
+    const ensureConfettiStyles = () => {
+        if (typeof document === 'undefined') return;
+        if (document.getElementById('confetti-keyframes')) return;
+        const style = document.createElement('style');
+        style.id = 'confetti-keyframes';
+        style.textContent = `
+@keyframes confetti-pop { 0%{transform:translate(0,0) scale(0.6) rotate(0deg); opacity:1} 80%{opacity:1} 100%{transform:translate(var(--dx), var(--dy)) scale(1) rotate(360deg); opacity:0} }
+`;
+        document.head.appendChild(style);
+    };
+    const rootRef = React.useRef(null);
+    const launchConfetti = () => {
+        if (typeof document === 'undefined') return;
+        ensureConfettiStyles();
+        const root = rootRef.current;
+        if (!root) return;
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.inset = '0';
+        container.style.overflow = 'hidden';
+        container.style.pointerEvents = 'none';
+        root.appendChild(container);
+        const colors = ['#60a5fa','#34d399','#f472b6','#f59e0b','#a78bfa','#22d3ee'];
+        const count = 18;
+        for (let i=0;i<count;i++){
+            const s = document.createElement('span');
+            const size = 6 + Math.random()*6;
+            const dx = (Math.random()*160 - 80) + 'px';
+            const dy = (Math.random()*-120 - 40) + 'px';
+            s.style.setProperty('--dx', dx);
+            s.style.setProperty('--dy', dy);
+            s.style.position = 'absolute';
+            s.style.left = (50 + (Math.random()*20 - 10)) + '%';
+            s.style.top = '50%';
+            s.style.width = size + 'px';
+            s.style.height = size + 'px';
+            s.style.background = colors[i % colors.length];
+            s.style.borderRadius = Math.random() > 0.5 ? '2px' : '50%';
+            s.style.transform = 'translate(0,0)';
+            s.style.animation = 'confetti-pop 700ms ease-out forwards';
+            s.style.boxShadow = '0 0 0 1px rgba(255,255,255,0.3) inset';
+            container.appendChild(s);
+        }
+        setTimeout(()=>{ container.remove(); }, 900);
+    };
+
     return (
         <div
             className={`group relative flex flex-col rounded-3xl bg-white shadow-md border-4 ${theme.border} hover:shadow-xl transition-transform hover:-translate-y-0.5 cursor-pointer`}
@@ -49,6 +96,7 @@ const CourseCard = ({ course, onClick }) => {
             role="button"
             tabIndex={0}
             onKeyDown={(e) => (e.key === "Enter" ? handleView(e) : null)}
+            ref={rootRef}
         >
             {/* playful corner sticker */}
             <div className="absolute right-3 top-3 select-none">
@@ -93,8 +141,8 @@ const CourseCard = ({ course, onClick }) => {
             </div>
         <div className="flex gap-3 px-5 pb-5">
                 <button
-                    onClick={handleStart}
-            className={`inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 ${theme.from.replace('from-','bg-').replace('-400','-500')} hover:brightness-110 ${theme.focus}`}
+                    onClick={(e)=>{ e.stopPropagation(); launchConfetti(); handleStart(e); }}
+                    className={`inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 ${theme.primaryBg} ${theme.primaryHover} ${theme.focus}`}
                     aria-label="Start learning"
                 >
                     Почати навчання
@@ -106,7 +154,7 @@ const CourseCard = ({ course, onClick }) => {
                     Переглянути курс
                 </button>
             </div>
-        <div className={`absolute inset-x-0 bottom-0 h-1 rounded-b-2xl bg-gradient-to-r ${theme.barFrom} ${theme.barVia} ${theme.barTo} opacity-0 group-hover:opacity-100 transition-opacity`} />
+            {/* bottom bar removed as requested */}
         </div>
     );
 };
