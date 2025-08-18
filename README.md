@@ -3,7 +3,9 @@
 </p>
 
 <p align="center">
-<a href="https://github.com/your-username/LogicLingo/actions"><img src="https://github.com/your-username/LogicLingo/workflows/tests/badge.svg" alt="Build Status"></a>
+   <a href="https://github.com/VladimirDuplii/Logi-Lingo/actions/workflows/ci.yml">
+      <img src="https://github.com/VladimirDuplii/Logi-Lingo/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI Status" />
+   </a>
 </p>
 
 # LogicLingo - Interactive Platform for Language Learning
@@ -83,9 +85,9 @@ LogicLingo includes a powerful admin panel built with Filament that allows admin
    ```
 7. Access the admin panel at `/admin`
 
-## License
-
-The LogicLingo app is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Note for local SPA auth (Sanctum):
+- Ensure your app runs on 127.0.0.1:8000 and Vite on 5173/5174.
+- `config/sanctum.php` includes common local ports; in the SPA client, axios must set `withCredentials: true` and fetch `/sanctum/csrf-cookie` before API calls.
 
 ## Code of Conduct
 
@@ -97,7 +99,7 @@ If you discover a security vulnerability within Laravel, please send an e-mail t
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+This project is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
 
 ## TODO / Roadmap
 
@@ -106,3 +108,15 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
    - Users can attempt to dig before completing the full map, but each dig attempt costs 50 XP.
    - Implement interactive image where users choose a precise spot to dig; success yields a treasure reward with gemstones.
    - Persist fragments per user, track attempts and XP deductions, and expose APIs + UI to view progress, attempt digs, and claim rewards.
+
+## API: Daily Quests and Daily Goal
+
+- GET `/api/v1/progress/daily`
+   - Returns today’s quests, points, hearts, date, and `daily_goal_xp`.
+- POST `/api/v1/progress/daily-goal`
+   - Body: `{ daily_goal_xp: number }` (10–200)
+   - Persists to DB if schema migrated; otherwise temporarily cached until migration is applied.
+
+Frontend wiring:
+- Sidebar widget in `RightCourseSidebar.jsx` shows quests and daily goal.
+- Settings page `/settings/coach` lets users choose a preset goal and save.
