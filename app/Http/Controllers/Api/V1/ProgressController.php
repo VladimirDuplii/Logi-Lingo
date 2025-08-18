@@ -18,6 +18,19 @@ use Illuminate\Support\Facades\Cache;
 
 class ProgressController extends BaseApiController
 {
+    /**
+     * Increment today's XP for the user in cache (resets daily).
+     */
+    protected function addDailyXp(int $userId, int $amount): void
+    {
+        if ($amount <= 0) return;
+        $today = Carbon::today();
+        $key = 'daily_xp_' . $userId . '_' . $today->toDateString();
+        $current = (int) Cache::get($key, 0);
+        // Expire at end of day
+        $ttl = $today->copy()->endOfDay();
+        Cache::put($key, $current + $amount, $ttl);
+    }
     /** Ensure hearts and points are initialized */
     protected function normalizeUserProgress(UserProgress $progress): UserProgress
     {
@@ -109,9 +122,17 @@ class ProgressController extends BaseApiController
             }
         }
 
-        // XP earned today: approximate by (completed challenges * 10) + 10 base per flawless lesson today.
-        // Since we don't have a dedicated XP ledger, we can return current points and leave xp_today as null for now.
-        $xpToday = null;
+        // XP earned today from cache-based ledger
+        $xpKey = 'daily_xp_' . $userId . '_' . $today->toDateString();
+        $xpToday = (int) Cache::get($xpKey, 0);
+        // Fallback: if cache is empty, approximate from today's progress and hydrate cache
+        if ($xpToday <= 0) {
+            $approx = ($answeredToday * 10) + ($lessonsCompletedToday * 10);
+            if ($approx > 0) {
+                $xpToday = $approx;
+                Cache::put($xpKey, $xpToday, $today->copy()->endOfDay());
+            }
+        }
 
         // Resolve goal even if column does not exist yet (temporary cache fallback)
         if (Schema::hasColumn('user_progress', 'daily_goal_xp')) {
@@ -119,29 +140,28 @@ class ProgressController extends BaseApiController
         } else {
             $goal = (int) Cache::get('daily_goal_xp_user_' . $userId, 30);
         }
-        $quests = [
-            [
+            $quests = [];
+            $quests[] = [
                 'key' => 'lesson_1',
                 'title' => 'Complete 1 lesson',
                 'progress' => min(1, $lessonsCompletedToday),
                 'total' => 1,
                 'completed' => $lessonsCompletedToday >= 1,
-            ],
-            [
+            ];
+            $quests[] = [
                 'key' => 'questions_20',
                 'title' => 'Answer 20 questions',
                 'progress' => min(20, $answeredToday),
                 'total' => 20,
                 'completed' => $answeredToday >= 20,
-            ],
-            [
+            ];
+            $quests[] = [
                 'key' => 'xp_30',
                 'title' => 'Earn ' . $goal . ' XP',
                 'progress' => $xpToday ?? 0,
                 'total' => $goal,
                 'completed' => ($xpToday ?? 0) >= $goal,
-            ],
-        ];
+            ];
 
         return $this->sendResponse([
             'quests' => $quests,
@@ -252,12 +272,15 @@ class ProgressController extends BaseApiController
             $xp += 10; // flawless bonus
         }
 
-        $userProgress->points += $xp;
+    $userProgress->points += $xp;
         if (Schema::hasColumn('user_progress', 'gems')) {
             // Award gems: flawless = 2, otherwise 1
             $userProgress->gems = (int) ($userProgress->gems ?? 0) + ($total > 0 && $correct === $total ? 2 : 1);
         }
         $userProgress->save();
+
+    // Track daily XP
+    $this->addDailyXp(Auth::id(), $xp);
 
         // Mark all challenges in this lesson as completed for this user to unlock the next lesson
         $challengeIds = $lesson->challenges()->pluck('id');
@@ -403,6 +426,8 @@ class ProgressController extends BaseApiController
                 $userProgress->gems = (int) ($userProgress->gems ?? 0) + 1;
             }
             $userProgress->save();
+            // Track daily XP
+            $this->addDailyXp(Auth::id(), 10);
         }
 
         return $this->sendResponse([
