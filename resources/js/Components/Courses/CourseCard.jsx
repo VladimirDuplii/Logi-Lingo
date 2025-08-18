@@ -2,7 +2,7 @@ import React from "react";
 import { router } from "@inertiajs/react";
 import { CourseService } from "../../Services";
 
-const CourseCard = ({ course, onClick }) => {
+const CourseCard = ({ course, onClick, isStarted = false }) => {
     const handleView = (e) => {
         e.stopPropagation();
         if (onClick) onClick();
@@ -89,6 +89,9 @@ const CourseCard = ({ course, onClick }) => {
         setTimeout(()=>{ container.remove(); }, 900);
     };
 
+    const primaryLabel = isStarted ? 'Продовжити' : 'Почати навчання';
+    const primaryAria = isStarted ? 'Continue learning' : 'Start learning';
+
     return (
         <div
             className={`group relative flex flex-col rounded-3xl bg-white shadow-md border-4 ${theme.border} hover:shadow-xl transition-transform hover:-translate-y-0.5 cursor-pointer`}
@@ -104,6 +107,16 @@ const CourseCard = ({ course, onClick }) => {
                     <span aria-hidden>{theme.badge}</span>
                 </div>
             </div>
+            {isStarted && (
+                <div className="absolute right-3 bottom-3 select-none pointer-events-none">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
+                        <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 0 1 0 1.414l-7.5 7.5a1 1 0 0 1-1.414 0l-3-3a1 1 0 1 1 1.414-1.414L8.5 12.086l6.793-6.793a1 1 0 0 1 1.414 0Z" clipRule="evenodd" />
+                        </svg>
+                        Розпочато
+                    </span>
+                </div>
+            )}
             <div className="flex items-center gap-4 p-5">
                 <div className={`h-14 w-14 flex items-center justify-center rounded-2xl bg-gradient-to-br ${theme.from} ${theme.to} text-white text-2xl font-bold shadow-inner`}
                 >
@@ -139,13 +152,13 @@ const CourseCard = ({ course, onClick }) => {
                     </div>
                 </div>
             </div>
-        <div className="flex gap-3 px-5 pb-5">
+    <div className="flex gap-3 px-5 pb-5">
                 <button
                     onClick={(e)=>{ e.stopPropagation(); launchConfetti(); handleStart(e); }}
                     className={`inline-flex items-center justify-center rounded-full px-4 py-2 text-sm font-semibold text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 ${theme.primaryBg} ${theme.primaryHover} ${theme.focus}`}
-                    aria-label="Start learning"
+            aria-label={primaryAria}
                 >
-                    Почати навчання
+            {primaryLabel}
                 </button>
                 <button
                     onClick={handleView}

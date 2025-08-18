@@ -6,13 +6,25 @@ const CourseList = ({ onCourseSelect }) => {
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [startedIds, setStartedIds] = useState(new Set());
 
     useEffect(() => {
         const fetchCourses = async () => {
             try {
-                const response = await CourseService.getCourses();
+                const [allRes, startedRes] = await Promise.all([
+                    CourseService.getCourses(),
+                    CourseService.getStartedCourses().catch(() => null),
+                ]);
                 // API returns { success, data: { courses, activeCourseId }, message }
-                setCourses((response?.data?.courses) || []);
+                setCourses((allRes?.data?.courses) || []);
+                if (startedRes) {
+                    const list = Array.isArray(startedRes?.data?.courses)
+                        ? startedRes.data.courses
+                        : [];
+                    setStartedIds(new Set(list.map((c) => c.id)));
+                } else {
+                    setStartedIds(new Set());
+                }
             } catch (err) {
                 setError('Failed to load courses. Please try again later.');
                 console.error('Error fetching courses:', err);
@@ -48,10 +60,11 @@ const CourseList = ({ onCourseSelect }) => {
                 <h2 className="text-2xl font-bold text-gray-800">Курси</h2>
             </div>
             <div className="grid grid-cols-1 gap-5">
-                {courses.map(course => (
+        {courses.map(course => (
                     <CourseCard
                         key={course.id}
-                        course={course}
+            course={course}
+            isStarted={startedIds.has(course.id)}
                         onClick={() => onCourseSelect(course)}
                     />
                 ))}
