@@ -2,6 +2,11 @@
 
 namespace App\Filament\Resources\Challenges\Schemas;
 
+use App\Filament\Resources\Challenges\Schemas\Types\ArrangeType;
+use App\Filament\Resources\Challenges\Schemas\Types\FillBlankType;
+use App\Filament\Resources\Challenges\Schemas\Types\ListenType;
+use App\Filament\Resources\Challenges\Schemas\Types\MatchType;
+use App\Filament\Resources\Challenges\Schemas\Types\SelectType;
 use App\Models\Lesson;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -29,7 +34,8 @@ class ChallengeForm
                         'speak' => 'Speak',
                         'arrange' => 'Arrange',
                     ])
-                    ->required(),
+                    ->required()
+                    ->live(),
                 Textarea::make('question')
                     ->required()
                     ->columnSpanFull(),
@@ -43,6 +49,13 @@ class ChallengeForm
                     ->image()
                     ->directory('challenges')
                     ->visibility('public'),
+                
+                // Type-specific fieldsets
+                SelectType::getFieldset(),
+                MatchType::getFieldset(),
+                FillBlankType::getFieldset(),
+                ListenType::getFieldset(),
+                ArrangeType::getFieldset(),
             ]);
     }
 }
