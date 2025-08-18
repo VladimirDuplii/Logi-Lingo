@@ -145,6 +145,21 @@ const ProgressService = {
         }
     },
 
+    // Practice calendar for streak view
+    getPracticeCalendar: async (month, year) => {
+        try {
+            const params = new URLSearchParams();
+            if (month) params.set('month', month);
+            if (year) params.set('year', year);
+            const qs = params.toString();
+            const response = await apiClient.get(`/progress/calendar${qs ? `?${qs}` : ''}`);
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching practice calendar:', error);
+            throw error;
+        }
+    },
+
     // Update daily XP goal
     updateDailyGoal: async (dailyGoalXp) => {
         try {

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { CourseService, ProgressService } from "../../Services";
 import { useToast } from "../Toast";
 
@@ -32,9 +32,30 @@ export default function RightCourseSidebar({
     const [loading, setLoading] = useState(false);
     const [fetchedCourses, setFetchedCourses] = useState([]);
     const [activeCourseId, setActiveCourseId] = useState(currentId || null);
-    const [courseMenuOpen, setCourseMenuOpen] = useState(false);
-    const [streakOpen, setStreakOpen] = useState(false);
-    const [gemsOpen, setGemsOpen] = useState(false);
+    // Ensure only one popover is open at a time: 'course' | 'streak' | 'gems' | null
+    const [openPanel, setOpenPanel] = useState(null);
+    const topBarRef = useRef(null);
+
+    // Close on click-outside or Escape
+    useEffect(() => {
+        const onDocClick = (e) => {
+            if (!openPanel) return;
+            const node = topBarRef.current;
+            if (node && !node.contains(e.target)) {
+                setOpenPanel(null);
+            }
+        };
+        const onKeyDown = (e) => {
+            if (!openPanel) return;
+            if (e.key === 'Escape') setOpenPanel(null);
+        };
+        document.addEventListener('mousedown', onDocClick);
+        document.addEventListener('keydown', onKeyDown);
+        return () => {
+            document.removeEventListener('mousedown', onDocClick);
+            document.removeEventListener('keydown', onKeyDown);
+        };
+    }, [openPanel]);
     // Daily quests state
     const [qLoading, setQLoading] = useState(true);
     const [qError, setQError] = useState("");
@@ -182,7 +203,7 @@ export default function RightCourseSidebar({
         try {
             await CourseService.setActiveCourse(cId);
             setActiveCourseId(cId);
-            setCourseMenuOpen(false);
+            setOpenPanel(null);
             toast.success("Active course updated");
         } catch (e) {
             toast.error("Не вдалося змінити курс");
@@ -190,28 +211,45 @@ export default function RightCourseSidebar({
     };
 
     const today = new Date();
-    const month = today.toLocaleString("en-US", { month: "long" });
+    const monthName = today.toLocaleString("en-US", { month: "long" });
     const year = today.getFullYear();
     const start = new Date(year, today.getMonth(), 1);
     const end = new Date(year, today.getMonth() + 1, 0);
     const days = Array.from({ length: end.getDate() }, (_, i) => i + 1);
+    const [practicedDays, setPracticedDays] = useState([]);
+
+    useEffect(() => {
+        // fetch practiced days when streak panel opens or month/year changes
+        if (openPanel !== 'streak') return;
+        (async () => {
+            try {
+                const res = await ProgressService.getPracticeCalendar?.(today.getMonth() + 1, year);
+                const data = res?.data || res;
+                const arr = Array.isArray(data?.days) ? data.days : [];
+                setPracticedDays(arr);
+            } catch (_) {
+                setPracticedDays([]);
+            }
+        })();
+    }, [openPanel, year, today]);
 
     return (
         <aside className="flex w-full flex-col gap-4">
             {/* Top bar like sample: course dropdown, streak, gems */}
-            <div className="my-1 flex items-center justify-between gap-3">
+            <div ref={topBarRef} className="my-1 flex items-center justify-between gap-3">
                 {/* Course dropdown */}
                 <div className="relative">
                     <button
                         type="button"
                         className="relative flex cursor-pointer items-center gap-2 rounded-xl p-2 font-bold uppercase text-gray-600 hover:bg-gray-100"
-                        onClick={() => setCourseMenuOpen((v) => !v)}
+                        aria-expanded={openPanel === 'course'}
+                        onClick={() => setOpenPanel((p) => (p === 'course' ? null : 'course'))}
                     >
                         {/* flag placeholder */}
                         <div className="h-6 w-8 rounded bg-gray-200" aria-hidden />
                         <div>{activeCourse?.title || "Course"}</div>
                     </button>
-                    {courseMenuOpen && (
+                    {openPanel === 'course' && (
                         <div className="absolute left-1/2 top-full z-10 w-72 -translate-x-1/2 overflow-hidden rounded-2xl border-2 border-gray-300 bg-white shadow-xl">
                             <h2 className="px-5 py-3 text-sm font-bold uppercase text-gray-400">My courses</h2>
                             <div className="max-h-64 overflow-y-auto">
@@ -241,18 +279,19 @@ export default function RightCourseSidebar({
                     <button
                         type="button"
                         className="relative flex items-center gap-2 rounded-xl p-2 font-bold text-orange-500 hover:bg-gray-100"
-                        onClick={() => setStreakOpen((v) => !v)}
+                        aria-expanded={openPanel === 'streak'}
+                        onClick={() => setOpenPanel((p) => (p === 'streak' ? null : 'streak'))}
                     >
                         <span aria-hidden className="pointer-events-none">🔥</span>
                         <span className="text-gray-400">{dailyMeta.streak || 0}</span>
                     </button>
-                    {streakOpen && (
+                    {openPanel === 'streak' && (
                         <div className="absolute left-1/2 top-full z-10 w-96 -translate-x-1/2 rounded-2xl border-2 border-gray-300 bg-white p-5 text-black shadow-xl">
                             <h2 className="text-center text-lg font-bold">Streak</h2>
                             <p className="text-center text-sm font-normal text-gray-400">Practice daily to keep your streak growing.</p>
                             <article className="mt-3 rounded-xl border-2 border-gray-300 p-3 text-gray-600">
                                 <header className="mb-2 flex items-center justify-between gap-3">
-                                    <div className="text-lg font-bold uppercase text-gray-500">{month} {year}</div>
+                                    <div className="text-lg font-bold uppercase text-gray-500">{monthName} {year}</div>
                                 </header>
                                 <div className="grid grid-cols-7 gap-1 px-1 py-2 text-center text-xs text-gray-500">
                                     {["S","M","T","W","T","F","S"].map((d) => (<div key={d} className="h-6 leading-6">{d}</div>))}
@@ -263,8 +302,14 @@ export default function RightCourseSidebar({
                                     ))}
                                     {days.map((d) => {
                                         const isToday = d === today.getDate();
+                                        const practiced = practicedDays.includes(d);
+                                        const cls = practiced
+                                            ? 'bg-green-500 text-white'
+                                            : isToday
+                                            ? 'bg-gray-300 text-gray-700'
+                                            : 'text-gray-700';
                                         return (
-                                            <div key={d} className={`flex h-8 w-8 items-center justify-center rounded-full mx-auto ${isToday ? 'bg-gray-300 text-gray-700' : ''}`}>{d}</div>
+                                            <div key={d} className={`flex h-8 w-8 items-center justify-center rounded-full mx-auto ${cls}`}>{d}</div>
                                         );
                                     })}
                                 </div>
@@ -275,11 +320,11 @@ export default function RightCourseSidebar({
 
                 {/* Gems */}
                 <div className="relative flex items-center gap-2 rounded-xl p-2 font-bold text-red-500 hover:bg-gray-100">
-                    <button type="button" className="flex items-center gap-2" onClick={() => setGemsOpen(v => !v)}>
+                    <button type="button" className="flex items-center gap-2" aria-expanded={openPanel === 'gems'} onClick={() => setOpenPanel((p) => (p === 'gems' ? null : 'gems'))}>
                         <span aria-hidden>💎</span>
                         <span className="text-gray-400">{dailyMeta.gems || 0}</span>
                     </button>
-                    {gemsOpen && (
+                    {openPanel === 'gems' && (
                         <div className="absolute left-1/2 top-full z-10 w-72 -translate-x-1/2 items-center gap-3 rounded-2xl border-2 border-gray-300 bg-white p-5 shadow-xl">
                             <div className="flex flex-col gap-3">
                                 <h2 className="text-xl font-bold text-black">Gems</h2>

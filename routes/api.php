@@ -41,6 +41,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/progress', [ProgressController::class, 'getUserProgress']);
         Route::get('/progress/daily', [ProgressController::class, 'getDaily']);
         Route::post('/progress/daily-goal', [ProgressController::class, 'updateDailyGoal']);
+    Route::get('/progress/calendar', [ProgressController::class, 'getPracticeCalendar']);
         Route::get('/progress/courses/{courseId}', [ProgressController::class, 'getCourseProgress']);
         Route::post('/progress/challenges/{challengeId}', [ProgressController::class, 'updateChallengeProgress']);
         Route::post('/progress/lessons/{lessonId}/complete', [ProgressController::class, 'completeLesson']);

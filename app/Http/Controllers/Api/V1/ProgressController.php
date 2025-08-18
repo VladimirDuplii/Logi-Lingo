@@ -539,4 +539,43 @@ class ProgressController extends BaseApiController
             'points' => (int) $userProgress->points,
         ], 'Hearts refilled using gems.');
     }
+
+    /**
+     * Return practiced days within a given month for the authenticated user
+     * Query params: month (1-12), year (YYYY). Defaults to current month/year.
+     */
+    public function getPracticeCalendar(Request $request)
+    {
+        $userId = Auth::id();
+        $today = Carbon::today();
+        $month = (int) ($request->query('month', $today->month));
+        $year = (int) ($request->query('year', $today->year));
+
+        // Normalize bounds
+        if ($month < 1 || $month > 12) {
+            $month = $today->month;
+        }
+        if ($year < 1970 || $year > 2100) {
+            $year = $today->year;
+        }
+
+        $start = Carbon::create($year, $month, 1)->startOfDay();
+        $end = (clone $start)->endOfMonth();
+
+        // Consider a day "practiced" if the user completed any challenge that day
+        $records = ChallengeProgress::where('user_id', $userId)
+            ->where('completed', true)
+            ->whereBetween('updated_at', [$start, $end])
+            ->get(['updated_at']);
+
+        $days = $records->map(function ($r) {
+            return Carbon::parse($r->updated_at)->day;
+        })->unique()->values()->all();
+
+        return $this->sendResponse([
+            'month' => $month,
+            'year' => $year,
+            'days' => array_values($days),
+        ], 'Practice calendar');
+    }
 }
