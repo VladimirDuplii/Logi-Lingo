@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\Challenges\Schemas\Types;
 
-use Filament\Forms\Components\Fieldset;
+use Filament\Schemas\Components\Fieldset;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
