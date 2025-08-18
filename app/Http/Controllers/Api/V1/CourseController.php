@@ -7,6 +7,8 @@ use App\Models\Course;
 use App\Models\Unit;
 use App\Models\Lesson;
 use App\Models\UserProgress;
+use App\Models\Challenge;
+use App\Models\ChallengeProgress;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -57,6 +59,34 @@ class CourseController extends BaseApiController
         ];
 
         return $this->sendResponse($data, 'Courses retrieved successfully.');
+    }
+
+    /**
+     * Отримати лише ті курси, які користувач реально почав (має >= 2 виконаних завдань у курсі)
+     */
+    public function started()
+    {
+        $userId = Auth::id();
+        // Find course IDs where user has completed at least 2 challenges in that course
+        $courseIds = ChallengeProgress::where('user_id', $userId)
+            ->where('completed', true)
+            ->join('challenges', 'challenge_progress.challenge_id', '=', 'challenges.id')
+            ->join('lessons', 'challenges.lesson_id', '=', 'lessons.id')
+            ->join('units', 'lessons.unit_id', '=', 'units.id')
+            ->select('units.course_id')
+            ->groupBy('units.course_id')
+            ->havingRaw('COUNT(*) >= 2')
+            ->pluck('units.course_id');
+
+        $courses = Course::whereIn('id', $courseIds)->get();
+
+        $userProgress = UserProgress::where('user_id', $userId)->first();
+        $activeCourseId = $userProgress ? $userProgress->active_course_id : null;
+
+        return $this->sendResponse([
+            'courses' => $courses,
+            'activeCourseId' => $activeCourseId,
+        ], 'Started courses retrieved successfully.');
     }
 
     /**

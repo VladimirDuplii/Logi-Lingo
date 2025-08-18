@@ -11,6 +11,16 @@ const CourseService = {
         }
     },
 
+    // Get only started courses
+    getStartedCourses: async () => {
+        try {
+            const response = await apiClient.get('/courses/started');
+            return response.data;
+        } catch (error) {
+            throw error;
+        }
+    },
+
     // Get specific course details
     getCourseById: async (courseId) => {
         try {

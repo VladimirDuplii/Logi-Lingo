@@ -30,7 +30,8 @@ Route::prefix('v1')->group(function () {
         Route::get('/auth/me', [AuthController::class, 'me']);
 
         // Курси
-        Route::get('/courses', [CourseController::class, 'index']);
+    Route::get('/courses', [CourseController::class, 'index']);
+    Route::get('/courses/started', [CourseController::class, 'started']);
         Route::get('/courses/{id}', [CourseController::class, 'show']);
         Route::post('/courses/{id}/active', [CourseController::class, 'setActive']);
         Route::get('/courses/{courseId}/units/{unitId}/lessons', [CourseController::class, 'lessons']);

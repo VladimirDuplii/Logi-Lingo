@@ -34,6 +34,7 @@ export default function RightCourseSidebar({
     const [activeCourseId, setActiveCourseId] = useState(currentId || null);
     const [courseMenuOpen, setCourseMenuOpen] = useState(false);
     const [streakOpen, setStreakOpen] = useState(false);
+    const [gemsOpen, setGemsOpen] = useState(false);
     // Daily quests state
     const [qLoading, setQLoading] = useState(true);
     const [qError, setQError] = useState("");
@@ -122,7 +123,9 @@ export default function RightCourseSidebar({
             }
             try {
                 setLoading(true);
-                const res = await CourseService.getCourses();
+                // Use only started courses
+                const res = await CourseService.getStartedCourses?.()
+                    ?.catch(() => CourseService.getCourses()) || await CourseService.getCourses();
                 // Support multiple API envelope shapes
                 const list = Array.isArray(res?.data?.courses)
                     ? res.data.courses
@@ -272,15 +275,19 @@ export default function RightCourseSidebar({
 
                 {/* Gems */}
                 <div className="relative flex items-center gap-2 rounded-xl p-2 font-bold text-red-500 hover:bg-gray-100">
-                    <span aria-hidden>💎</span>
-                    <span className="text-gray-400">{dailyMeta.gems || 0}</span>
-                    <div className="absolute left-1/2 top-full z-10 hidden w-72 -translate-x-1/2 items-center gap-3 rounded-2xl border-2 border-gray-300 bg-white p-5 md:flex">
-                        <div className="flex flex-col gap-3">
-                            <h2 className="text-xl font-bold text-black">Gems</h2>
-                            <p className="text-sm font-normal text-gray-400">You have {dailyMeta.gems || 0} gems.</p>
-                            <a className="uppercase text-blue-500 transition hover:brightness-110" href="/shop">Go to shop →</a>
+                    <button type="button" className="flex items-center gap-2" onClick={() => setGemsOpen(v => !v)}>
+                        <span aria-hidden>💎</span>
+                        <span className="text-gray-400">{dailyMeta.gems || 0}</span>
+                    </button>
+                    {gemsOpen && (
+                        <div className="absolute left-1/2 top-full z-10 w-72 -translate-x-1/2 items-center gap-3 rounded-2xl border-2 border-gray-300 bg-white p-5 shadow-xl">
+                            <div className="flex flex-col gap-3">
+                                <h2 className="text-xl font-bold text-black">Gems</h2>
+                                <p className="text-sm font-normal text-gray-400">You have {dailyMeta.gems || 0} gems.</p>
+                                <a className="uppercase text-blue-500 transition hover:brightness-110" href="/shop">Go to shop →</a>
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
 
