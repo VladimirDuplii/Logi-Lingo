@@ -41,7 +41,7 @@ class LogicLessonsSeeder extends Seeder
                     $existing->save();
                 } else {
                     // Ensure order is correct
-                    if ((int)$existing->order !== (int)$d['order']) {
+                    if ((int) $existing->order !== (int) $d['order']) {
                         $existing->order = $d['order'];
                         $existing->save();
                     }

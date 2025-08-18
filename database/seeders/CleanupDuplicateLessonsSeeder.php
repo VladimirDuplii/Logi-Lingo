@@ -15,8 +15,8 @@ class CleanupDuplicateLessonsSeeder extends Seeder
     public function run(): void
     {
         DB::transaction(function () {
-            $dupeGroups = Lesson::select('unit_id','title', DB::raw('COUNT(*) as cnt'))
-                ->groupBy('unit_id','title')
+            $dupeGroups = Lesson::select('unit_id', 'title', DB::raw('COUNT(*) as cnt'))
+                ->groupBy('unit_id', 'title')
                 ->having('cnt', '>', 1)
                 ->get();
 

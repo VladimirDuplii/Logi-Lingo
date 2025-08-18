@@ -13,7 +13,7 @@ class UserProgress extends Model
     protected $primaryKey = 'user_id';
     public $incrementing = false;
     protected $keyType = 'int';
-    
+
     protected $fillable = [
         'user_id',
         'active_course_id',
@@ -21,14 +21,17 @@ class UserProgress extends Model
         'user_image_src',
         'hearts',
         'points',
-    'daily_goal_xp',
+    'gems',
+    'streak',
+    'last_activity_date',
+        'daily_goal_xp',
     ];
-    
+
     public function user()
     {
         return $this->belongsTo(User::class);
     }
-    
+
     public function activeCourse()
     {
         return $this->belongsTo(Course::class, 'active_course_id');

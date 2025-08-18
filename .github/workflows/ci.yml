@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - feat/**
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  backend-tests:
+    name: PHP tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, dom, curl, fileinfo, pdo, sqlite, pdo_sqlite, openssl
+          coverage: none
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.composer/cache/files
+            vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-composer-
+
+      - name: Install Composer dependencies
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare environment (.env)
+        run: |
+          if [ -f .env ]; then echo ".env exists"; else cp .env.example .env || true; fi
+          php -r "file_exists('database') || mkdir('database');"
+          touch database/database.sqlite
+          php -r "file_put_contents('.env', preg_replace('/^DB_CONNECTION=.*/m', 'DB_CONNECTION=sqlite', file_get_contents('.env')));"
+          php -r "file_put_contents('.env', preg_replace('/^DB_DATABASE=.*/m', 'DB_DATABASE=database/database.sqlite', file_get_contents('.env')));"
+          php -r "file_put_contents('.env', preg_replace('/^CACHE_DRIVER=.*/m', 'CACHE_DRIVER=array', file_get_contents('.env')));"
+          php -r "file_put_contents('.env', preg_replace('/^SESSION_DRIVER=.*/m', 'SESSION_DRIVER=array', file_get_contents('.env')));"
+          php -r "file_put_contents('.env', preg_replace('/^QUEUE_CONNECTION=.*/m', 'QUEUE_CONNECTION=sync', file_get_contents('.env')));"
+          php -r "file_put_contents('.env', preg_replace('/^MAIL_MAILER=.*/m', 'MAIL_MAILER=log', file_get_contents('.env')));"
+
+      - name: Generate app key
+        run: php artisan key:generate
+
+      - name: Run migrations
+        run: php artisan migrate --force
+
+      - name: Run test suite
+        run: php artisan test --no-coverage --stop-on-failure
+
+  frontend-build:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then npm ci; else npm install; fi
+
+      - name: Build
+        run: npm run build

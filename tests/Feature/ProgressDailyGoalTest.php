@@ -94,7 +94,11 @@ class ProgressDailyGoalTest extends TestCase
             ->assertJsonPath('data.daily_goal_xp', 50)
             ->assertJsonStructure([
                 'data' => [
-                    'quests', 'points', 'hearts', 'date', 'daily_goal_xp'
+                    'quests',
+                    'points',
+                    'hearts',
+                    'date',
+                    'daily_goal_xp'
                 ]
             ]);
     }

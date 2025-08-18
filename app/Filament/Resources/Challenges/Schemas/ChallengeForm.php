@@ -13,7 +13,7 @@ class ChallengeForm
 {
     public static function configure(Schema $schema): Schema
     {
-    return $schema
+        return $schema
             ->components([
                 Select::make('lesson_id')
                     ->label('Lesson')

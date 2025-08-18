@@ -23,12 +23,25 @@ class ProgressController extends BaseApiController
     {
         $changed = false;
         if (!is_int($progress->hearts)) {
-            $progress->hearts = is_numeric($progress->hearts) ? (int)$progress->hearts : 5;
+            $progress->hearts = is_numeric($progress->hearts) ? (int) $progress->hearts : 5;
             $changed = true;
         }
         if (!is_int($progress->points)) {
-            $progress->points = is_numeric($progress->points) ? (int)$progress->points : 0;
+            $progress->points = is_numeric($progress->points) ? (int) $progress->points : 0;
             $changed = true;
+        }
+        // Optional meta if columns exist (backward compatible)
+        if (Schema::hasColumn('user_progress', 'gems')) {
+            if (!is_int($progress->gems ?? null)) {
+                $progress->gems = is_numeric($progress->gems ?? null) ? (int) $progress->gems : 0;
+                $changed = true;
+            }
+        }
+        if (Schema::hasColumn('user_progress', 'streak')) {
+            if (!is_int($progress->streak ?? null)) {
+                $progress->streak = is_numeric($progress->streak ?? null) ? (int) $progress->streak : 0;
+                $changed = true;
+            }
         }
         if ($changed) {
             $progress->save();
@@ -51,6 +64,26 @@ class ProgressController extends BaseApiController
         );
         $userProgress = $this->normalizeUserProgress($userProgress);
 
+        // Maintain daily streak when corresponding columns exist
+        $hasStreak = Schema::hasColumn('user_progress', 'streak');
+        $hasLast = Schema::hasColumn('user_progress', 'last_activity_date');
+        if ($hasStreak && $hasLast) {
+            $yesterday = Carbon::yesterday();
+            $last = $userProgress->last_activity_date ? Carbon::parse($userProgress->last_activity_date) : null;
+            if (!$last) {
+                // start streak on first activity
+                $userProgress->streak = max(1, (int) ($userProgress->streak ?? 0));
+            } elseif ($last->isSameDay($today)) {
+                // already recorded today
+            } elseif ($last->isSameDay($yesterday)) {
+                $userProgress->streak = (int) ($userProgress->streak ?? 0) + 1;
+            } else {
+                $userProgress->streak = 1; // reset and start again
+            }
+            $userProgress->last_activity_date = $today->toDateString();
+            $userProgress->save();
+        }
+
         // Count answered questions today via ChallengeProgress updated today
         $answeredToday = ChallengeProgress::where('user_id', $userId)
             ->where('completed', true)
@@ -62,12 +95,13 @@ class ProgressController extends BaseApiController
         $lessonsCompletedToday = 0;
         foreach ($lessonIds as $lid) {
             $total = Challenge::where('lesson_id', $lid)->count();
-            if ($total === 0) continue;
+            if ($total === 0)
+                continue;
             $completed = Challenge::where('lesson_id', $lid)
-                ->whereHas('challengeProgress', function($q) use ($userId, $today) {
+                ->whereHas('challengeProgress', function ($q) use ($userId, $today) {
                     $q->where('user_id', $userId)
-                      ->where('completed', true)
-                      ->whereDate('updated_at', '>=', $today);
+                        ->where('completed', true)
+                        ->whereDate('updated_at', '>=', $today);
                 })
                 ->count();
             if ($completed >= $total) {
@@ -81,11 +115,11 @@ class ProgressController extends BaseApiController
 
         // Resolve goal even if column does not exist yet (temporary cache fallback)
         if (Schema::hasColumn('user_progress', 'daily_goal_xp')) {
-            $goal = (int)($userProgress->daily_goal_xp ?? 30);
+            $goal = (int) ($userProgress->daily_goal_xp ?? 30);
         } else {
             $goal = (int) Cache::get('daily_goal_xp_user_' . $userId, 30);
         }
-    $quests = [
+        $quests = [
             [
                 'key' => 'lesson_1',
                 'title' => 'Complete 1 lesson',
@@ -111,9 +145,11 @@ class ProgressController extends BaseApiController
 
         return $this->sendResponse([
             'quests' => $quests,
-            'points' => (int)$userProgress->points,
-            'hearts' => (int)$userProgress->hearts,
+            'points' => (int) $userProgress->points,
+            'gems' => Schema::hasColumn('user_progress', 'gems') ? (int) ($userProgress->gems ?? 0) : 0,
+            'hearts' => (int) $userProgress->hearts,
             'date' => $today->toDateString(),
+            'streak' => Schema::hasColumn('user_progress', 'streak') ? (int) ($userProgress->streak ?? 0) : 0,
             'daily_goal_xp' => $goal,
         ], 'Daily quests summary');
     }
@@ -147,12 +183,12 @@ class ProgressController extends BaseApiController
             ['user_id' => Auth::id()],
             ['hearts' => 5, 'points' => 0, 'daily_goal_xp' => 30]
         );
-    $userProgress = $this->normalizeUserProgress($userProgress);
-    $userProgress->daily_goal_xp = $value;
+        $userProgress = $this->normalizeUserProgress($userProgress);
+        $userProgress->daily_goal_xp = $value;
         $userProgress->save();
 
         return $this->sendResponse([
-            'daily_goal_xp' => (int)$userProgress->daily_goal_xp,
+            'daily_goal_xp' => (int) $userProgress->daily_goal_xp,
         ], 'Daily goal updated successfully.');
     }
     /**
@@ -165,7 +201,7 @@ class ProgressController extends BaseApiController
         $userProgress = UserProgress::where('user_id', Auth::id())
             ->with('activeCourse')
             ->first();
-            
+
         if (!$userProgress) {
             $userProgress = new UserProgress();
             $userProgress->user_id = Auth::id();
@@ -173,7 +209,7 @@ class ProgressController extends BaseApiController
             $userProgress->points = 0;
             $userProgress->save();
         }
-    $userProgress = $this->normalizeUserProgress($userProgress);
+        $userProgress = $this->normalizeUserProgress($userProgress);
         return $this->sendResponse($userProgress, 'User progress retrieved successfully.');
     }
 
@@ -200,11 +236,11 @@ class ProgressController extends BaseApiController
             return $this->sendError('Lesson not found.');
         }
 
-    $userProgress = UserProgress::firstOrCreate(
+        $userProgress = UserProgress::firstOrCreate(
             ['user_id' => Auth::id()],
             ['hearts' => 5, 'points' => 0]
         );
-    $userProgress = $this->normalizeUserProgress($userProgress);
+        $userProgress = $this->normalizeUserProgress($userProgress);
 
         // Completion bonus only (per-challenge XP is handled in updateChallengeProgress)
         $correct = (int) $request->integer('correct');
@@ -217,6 +253,10 @@ class ProgressController extends BaseApiController
         }
 
         $userProgress->points += $xp;
+        if (Schema::hasColumn('user_progress', 'gems')) {
+            // Award gems: flawless = 2, otherwise 1
+            $userProgress->gems = (int) ($userProgress->gems ?? 0) + ($total > 0 && $correct === $total ? 2 : 1);
+        }
         $userProgress->save();
 
         // Mark all challenges in this lesson as completed for this user to unlock the next lesson
@@ -236,6 +276,7 @@ class ProgressController extends BaseApiController
         return $this->sendResponse([
             'awarded_xp' => $xp,
             'points' => $userProgress->points,
+            'gems' => Schema::hasColumn('user_progress', 'gems') ? (int) ($userProgress->gems ?? 0) : 0,
             'hearts' => $userProgress->hearts,
             'lesson_completed' => true,
         ], 'Lesson completed and points awarded.');
@@ -250,28 +291,34 @@ class ProgressController extends BaseApiController
     public function getCourseProgress($courseId)
     {
         $course = Course::find($courseId);
-        
+
         if (is_null($course)) {
             return $this->sendError('Course not found.');
         }
-        
+
         // Отримуємо всі розділи курсу з уроками і завданнями
         $units = Unit::where('course_id', $courseId)
-            ->with(['lessons' => function($query) {
-                $query->orderBy('order', 'asc');
-                $query->with(['challenges' => function($query) {
+            ->with([
+                'lessons' => function ($query) {
                     $query->orderBy('order', 'asc');
-                    $query->with(['challengeProgress' => function($query) {
-                        $query->where('user_id', Auth::id());
-                    }]);
-                }]);
-            }])
+                    $query->with([
+                        'challenges' => function ($query) {
+                            $query->orderBy('order', 'asc');
+                            $query->with([
+                                'challengeProgress' => function ($query) {
+                                    $query->where('user_id', Auth::id());
+                                }
+                            ]);
+                        }
+                    ]);
+                }
+            ])
             ->orderBy('order', 'asc')
             ->get();
-        
+
         // Форматуємо дані, додаючи статус виконання для кожного уроку
-        $formattedUnits = $units->map(function($unit) {
-            $lessonsWithStatus = $unit->lessons->map(function($lesson) {
+        $formattedUnits = $units->map(function ($unit) {
+            $lessonsWithStatus = $unit->lessons->map(function ($lesson) {
                 $totalChallenges = $lesson->challenges->count();
                 if ($totalChallenges === 0) {
                     return array_merge($lesson->toArray(), [
@@ -285,8 +332,11 @@ class ProgressController extends BaseApiController
 
                 $completedCount = 0;
                 foreach ($lesson->challenges as $challenge) {
-                    if ($challenge->challengeProgress->isNotEmpty() &&
-                        $challenge->challengeProgress->every(function($progress) { return $progress->completed; })) {
+                    if (
+                        $challenge->challengeProgress->isNotEmpty() &&
+                        $challenge->challengeProgress->every(function ($progress) {
+                            return $progress->completed; })
+                    ) {
                         $completedCount++;
                     }
                 }
@@ -304,7 +354,7 @@ class ProgressController extends BaseApiController
 
             return array_merge($unit->toArray(), ['lessons' => $lessonsWithStatus]);
         });
-        
+
         return $this->sendResponse($formattedUnits, 'Course progress retrieved successfully.');
     }
 
@@ -324,13 +374,13 @@ class ProgressController extends BaseApiController
         if ($validator->fails()) {
             return $this->sendError('Validation Error.', $validator->errors()->toArray(), 422);
         }
-        
+
         $challenge = Challenge::find($challengeId);
-        
+
         if (is_null($challenge)) {
             return $this->sendError('Challenge not found.');
         }
-        
+
         $progress = ChallengeProgress::updateOrCreate(
             [
                 'user_id' => Auth::id(),
@@ -340,21 +390,25 @@ class ProgressController extends BaseApiController
                 'completed' => $request->completed
             ]
         );
-        
+
         // Якщо завдання виконане успішно, додаємо бали користувачу (створюємо запис при необхідності)
-    $userProgress = UserProgress::firstOrCreate(
+        $userProgress = UserProgress::firstOrCreate(
             ['user_id' => Auth::id()],
             ['hearts' => 5, 'points' => 0]
         );
-    $userProgress = $this->normalizeUserProgress($userProgress);
+        $userProgress = $this->normalizeUserProgress($userProgress);
         if ($request->completed) {
             $userProgress->points += 10;
+            if (Schema::hasColumn('user_progress', 'gems')) {
+                $userProgress->gems = (int) ($userProgress->gems ?? 0) + 1;
+            }
             $userProgress->save();
         }
-        
+
         return $this->sendResponse([
             'progress' => $progress,
             'points' => $userProgress?->points,
+            'gems' => Schema::hasColumn('user_progress', 'gems') ? $userProgress?->gems : 0,
             'hearts' => $userProgress?->hearts,
         ], 'Challenge progress updated successfully.');
     }
@@ -368,26 +422,26 @@ class ProgressController extends BaseApiController
     public function reduceHearts($challengeId)
     {
         $challenge = Challenge::find($challengeId);
-        
+
         if (is_null($challenge)) {
             return $this->sendError('Challenge not found.');
         }
-        
-    $userProgress = UserProgress::firstOrCreate(
+
+        $userProgress = UserProgress::firstOrCreate(
             ['user_id' => Auth::id()],
             ['hearts' => 5, 'points' => 0]
         );
-    $userProgress = $this->normalizeUserProgress($userProgress);
-        
+        $userProgress = $this->normalizeUserProgress($userProgress);
+
         // Перевіряємо, чи є життя
-    if ((int)$userProgress->hearts <= 0) {
+        if ((int) $userProgress->hearts <= 0) {
             return $this->sendError('No hearts left.', [], 403);
         }
-        
+
         // Зменшуємо кількість життів
-    $userProgress->hearts = max(0, (int)$userProgress->hearts - 1);
+        $userProgress->hearts = max(0, (int) $userProgress->hearts - 1);
         $userProgress->save();
-        
+
         return $this->sendResponse($userProgress, 'Hearts reduced successfully.');
     }
 
@@ -398,28 +452,28 @@ class ProgressController extends BaseApiController
      */
     public function refillHearts()
     {
-    $userProgress = UserProgress::where('user_id', Auth::id())->first();
-        
+        $userProgress = UserProgress::where('user_id', Auth::id())->first();
+
         if (!$userProgress) {
             return $this->sendError('User progress not found.');
         }
-    $userProgress = $this->normalizeUserProgress($userProgress);
-        
+        $userProgress = $this->normalizeUserProgress($userProgress);
+
         // Перевіряємо чи повний запас життів
-    if ((int)$userProgress->hearts >= 5) {
+        if ((int) $userProgress->hearts >= 5) {
             return $this->sendError('Hearts are already full.', [], 400);
         }
-        
+
         // Перевіряємо чи достатньо балів (50 балів за одне життя)
-    if ((int)$userProgress->points < 50) {
+        if ((int) $userProgress->points < 50) {
             return $this->sendError('Not enough points.', [], 400);
         }
-        
+
         // Відновлюємо життя і віднімаємо бали
         $userProgress->hearts = 5;
         $userProgress->points -= 50;
         $userProgress->save();
-        
+
         return $this->sendResponse($userProgress, 'Hearts refilled successfully.');
     }
 }

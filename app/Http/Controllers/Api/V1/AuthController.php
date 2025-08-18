@@ -49,7 +49,7 @@ class AuthController extends BaseApiController
             'token_type' => 'Bearer',
         ];
 
-    return $this->sendResponse($data, 'User registered successfully.', 201);
+        return $this->sendResponse($data, 'User registered successfully.', 201);
     }
 
     /**

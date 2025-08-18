@@ -8,18 +8,18 @@ use Illuminate\Database\Eloquent\Model;
 class Lesson extends Model
 {
     use HasFactory;
-    
+
     protected $fillable = [
         'unit_id',
         'title',
         'order',
     ];
-    
+
     public function unit()
     {
         return $this->belongsTo(Unit::class);
     }
-    
+
     public function challenges()
     {
         return $this->hasMany(Challenge::class);

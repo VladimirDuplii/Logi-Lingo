@@ -18,12 +18,14 @@ class MigrateMediaToPublic extends Command
     {
         $dry = (bool) $this->option('dry-run');
 
-        $this->info('Starting media migration'.($dry ? ' (dry-run)' : ''));
+        $this->info('Starting media migration' . ($dry ? ' (dry-run)' : ''));
 
-        $moved = 0; $normalized = 0;
+        $moved = 0;
+        $normalized = 0;
 
         $normalizePath = function (?string $path) {
-            if (!$path) return $path;
+            if (!$path)
+                return $path;
             $p = ltrim($path, '/');
             // strip known prefixes that should not be stored in DB
             if (str_starts_with($p, 'storage/')) {
@@ -70,28 +72,54 @@ class MigrateMediaToPublic extends Command
             // Challenges (image/audio)
             Challenge::chunk(200, function ($chunk) use ($normalizePath, $moveIfExists, &$normalized) {
                 foreach ($chunk as $c) {
-                    $origImage = $c->image_src; $origAudio = $c->audio_src;
+                    $origImage = $c->image_src;
+                    $origAudio = $c->audio_src;
                     $img = $normalizePath($c->image_src);
                     $aud = $normalizePath($c->audio_src);
-                    if ($img && $img !== $origImage) { $c->image_src = $img; $normalized++; }
-                    if ($aud && $aud !== $origAudio) { $c->audio_src = $aud; $normalized++; }
-                    if ($img) { $moveIfExists($img); }
-                    if ($aud) { $moveIfExists($aud); }
-                    if ($c->isDirty()) { $c->save(); }
+                    if ($img && $img !== $origImage) {
+                        $c->image_src = $img;
+                        $normalized++;
+                    }
+                    if ($aud && $aud !== $origAudio) {
+                        $c->audio_src = $aud;
+                        $normalized++;
+                    }
+                    if ($img) {
+                        $moveIfExists($img);
+                    }
+                    if ($aud) {
+                        $moveIfExists($aud);
+                    }
+                    if ($c->isDirty()) {
+                        $c->save();
+                    }
                 }
             });
 
             // Challenge options (image/audio)
             ChallengeOption::chunk(200, function ($chunk) use ($normalizePath, $moveIfExists, &$normalized) {
                 foreach ($chunk as $o) {
-                    $origImage = $o->image_src; $origAudio = $o->audio_src;
+                    $origImage = $o->image_src;
+                    $origAudio = $o->audio_src;
                     $img = $normalizePath($o->image_src);
                     $aud = $normalizePath($o->audio_src);
-                    if ($img && $img !== $origImage) { $o->image_src = $img; $normalized++; }
-                    if ($aud && $aud !== $origAudio) { $o->audio_src = $aud; $normalized++; }
-                    if ($img) { $moveIfExists($img); }
-                    if ($aud) { $moveIfExists($aud); }
-                    if ($o->isDirty()) { $o->save(); }
+                    if ($img && $img !== $origImage) {
+                        $o->image_src = $img;
+                        $normalized++;
+                    }
+                    if ($aud && $aud !== $origAudio) {
+                        $o->audio_src = $aud;
+                        $normalized++;
+                    }
+                    if ($img) {
+                        $moveIfExists($img);
+                    }
+                    if ($aud) {
+                        $moveIfExists($aud);
+                    }
+                    if ($o->isDirty()) {
+                        $o->save();
+                    }
                 }
             });
         });

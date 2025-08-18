@@ -35,18 +35,18 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    
+
     // Course routes
     Route::get('/courses', function () {
         return Inertia::render('Courses/Index');
     })->name('courses.index');
-    
+
     Route::get('/courses/{course}', function (Course $course) {
         return Inertia::render('Courses/Show', [
             'course' => $course->load('units.lessons')
         ]);
     })->name('courses.show');
-    
+
     // Progress routes
     Route::get('/progress', function () {
         return Inertia::render('Progress/Index');
@@ -58,4 +58,4 @@ Route::middleware('auth')->group(function () {
     })->name('settings.coach');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';

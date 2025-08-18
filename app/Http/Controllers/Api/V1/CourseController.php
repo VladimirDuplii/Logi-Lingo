@@ -18,7 +18,8 @@ class CourseController extends BaseApiController
      */
     protected function fileUrl(?string $path): ?string
     {
-        if (!$path) return null;
+        if (!$path)
+            return null;
         // Already absolute URL
         if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
             return $path;
@@ -34,8 +35,8 @@ class CourseController extends BaseApiController
         if (str_starts_with($path, 'public/')) {
             $path = substr($path, 7);
         }
-    // Generate a public URL (honors public disk mapping to /storage)
-    return Storage::url($path);
+        // Generate a public URL (honors public disk mapping to /storage)
+        return Storage::url($path);
     }
     /**
      * Отримати список усіх курсів
@@ -45,16 +46,16 @@ class CourseController extends BaseApiController
     public function index()
     {
         $courses = Course::all();
-        
+
         // Отримуємо активний курс користувача, якщо він є
         $userProgress = UserProgress::where('user_id', Auth::id())->first();
         $activeCourseId = $userProgress ? $userProgress->active_course_id : null;
-        
+
         $data = [
             'courses' => $courses,
             'activeCourseId' => $activeCourseId
         ];
-        
+
         return $this->sendResponse($data, 'Courses retrieved successfully.');
     }
 
@@ -67,11 +68,11 @@ class CourseController extends BaseApiController
     public function show($id)
     {
         $course = Course::with('units.lessons')->find($id);
-        
+
         if (is_null($course)) {
             return $this->sendError('Course not found.');
         }
-        
+
         return $this->sendResponse($course, 'Course retrieved successfully.');
     }
 
@@ -84,16 +85,16 @@ class CourseController extends BaseApiController
     public function setActive($id)
     {
         $course = Course::find($id);
-        
+
         if (is_null($course)) {
             return $this->sendError('Course not found.');
         }
-        
+
         $userProgress = UserProgress::updateOrCreate(
             ['user_id' => Auth::id()],
             ['active_course_id' => $id]
         );
-        
+
         return $this->sendResponse($userProgress, 'Active course set successfully.');
     }
 
@@ -134,18 +135,22 @@ class CourseController extends BaseApiController
             return $this->sendError('Lesson not found.', [], 404);
         }
 
-        $lesson->load(['unit' => function ($q) use ($courseId) {
-            $q->where('course_id', $courseId);
-        }]);
+        $lesson->load([
+            'unit' => function ($q) use ($courseId) {
+                $q->where('course_id', $courseId);
+            }
+        ]);
 
         if (!$lesson->unit) {
             return $this->sendError('Lesson does not belong to this course/unit.', [], 404);
         }
 
         $challenges = $lesson->challenges()
-            ->with(['options' => function ($q) {
-                $q->orderBy('id');
-            }])
+            ->with([
+                'options' => function ($q) {
+                    $q->orderBy('id');
+                }
+            ])
             ->orderBy('order')
             ->get()
             ->map(function ($challenge) {
@@ -155,15 +160,15 @@ class CourseController extends BaseApiController
                     'text' => $challenge->question,
                     'type' => $challenge->type,
                     'order' => $challenge->order,
-            'image_url' => $this->fileUrl($challenge->image_src),
-            'audio_url' => $this->fileUrl($challenge->audio_src),
+                    'image_url' => $this->fileUrl($challenge->image_src),
+                    'audio_url' => $this->fileUrl($challenge->audio_src),
                     'options' => $challenge->options->map(function ($opt) {
                         return [
                             'id' => $opt->id,
                             'text' => $opt->text,
                             'is_correct' => (bool) $opt->is_correct,
-                'image_url' => $this->fileUrl($opt->image_src ?? null),
-                'audio_url' => $this->fileUrl($opt->audio_src ?? null),
+                            'image_url' => $this->fileUrl($opt->image_src ?? null),
+                            'audio_url' => $this->fileUrl($opt->audio_src ?? null),
                         ];
                     })->values()->all(),
                 ];

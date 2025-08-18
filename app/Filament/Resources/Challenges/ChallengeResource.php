@@ -22,11 +22,11 @@ class ChallengeResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedPuzzlePiece;
 
     protected static ?string $recordTitleAttribute = 'title';
-    
+
     protected static ?int $navigationSort = 4;
-    
+
     protected static string|UnitEnum|null $navigationGroup = 'Курси';
-    
+
     protected static ?string $navigationLabel = 'Запитання';
 
     public static function form(Schema $schema): Schema

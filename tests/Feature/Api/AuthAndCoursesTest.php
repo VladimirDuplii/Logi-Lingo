@@ -31,17 +31,18 @@ class AuthAndCoursesTest extends TestCase
         ]);
 
         $login->assertOk()
-            ->assertJson(fn(AssertableJson $json) => $json
-                ->where('success', true)
-                ->has('data.access_token')
-                ->etc()
+            ->assertJson(
+                fn(AssertableJson $json) => $json
+                    ->where('success', true)
+                    ->has('data.access_token')
+                    ->etc()
             );
 
         $token = $login->json('data.access_token');
         $this->assertNotEmpty($token);
 
         // Access protected endpoint with Bearer token
-        $courses = $this->withHeader('Authorization', 'Bearer '.$token)
+        $courses = $this->withHeader('Authorization', 'Bearer ' . $token)
             ->getJson('/api/v1/courses');
 
         $courses->assertOk();

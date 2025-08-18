@@ -21,7 +21,7 @@ class DatabaseSeeder extends Seeder
                 'email' => 'test@example.com',
             ]);
         }
-        
+
         // Запускаємо наші сідери для курсів, розділів та уроків
         $this->call([
             CourseSeeder::class,
@@ -29,7 +29,7 @@ class DatabaseSeeder extends Seeder
             LessonSeeder::class,
             LogicLessonsSeeder::class,
             LogicChallengesSeeder::class,
-            // Run cleanup at the end to merge any duplicates created previously
+                // Run cleanup at the end to merge any duplicates created previously
             CleanupDuplicateLessonsSeeder::class,
         ]);
     }

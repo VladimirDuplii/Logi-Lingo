@@ -22,11 +22,11 @@ class ChallengeOptionResource extends Resource
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedListBullet;
 
     protected static ?string $recordTitleAttribute = 'title';
-    
+
     protected static ?int $navigationSort = 5;
-    
+
     protected static string|UnitEnum|null $navigationGroup = 'Курси';
-    
+
     protected static ?string $navigationLabel = 'Варіанти відповідей';
 
     public static function form(Schema $schema): Schema

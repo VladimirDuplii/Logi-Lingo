@@ -22,7 +22,7 @@ class ChallengesTable
                 TextColumn::make('type')
                     ->searchable()
                     ->badge()
-                    ->color(fn (string $state): string => match ($state) {
+                    ->color(fn(string $state): string => match ($state) {
                         'select' => 'success',
                         'match' => 'info',
                         'fill-blank' => 'warning',
@@ -41,10 +41,13 @@ class ChallengesTable
                     ->toggleable(isToggledHiddenByDefault: true),
                 ImageColumn::make('image_src')
                     ->getStateUsing(function ($record) {
-                        $p = ltrim((string)($record->image_src ?? ''), '/');
-                        if ($p === '') return $p;
-                        if (str_starts_with($p, 'storage/')) $p = substr($p, 8);
-                        if (str_starts_with($p, 'public/')) $p = substr($p, 7);
+                        $p = ltrim((string) ($record->image_src ?? ''), '/');
+                        if ($p === '')
+                            return $p;
+                        if (str_starts_with($p, 'storage/'))
+                            $p = substr($p, 8);
+                        if (str_starts_with($p, 'public/'))
+                            $p = substr($p, 7);
                         return '/storage/' . ltrim($p, '/');
                     })
                     ->toggleable(),

@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class ChallengeOption extends Model
 {
     use HasFactory;
-    
+
     protected $fillable = [
         'challenge_id',
         'text',
@@ -16,7 +16,7 @@ class ChallengeOption extends Model
         'audio_src',
         'image_src',
     ];
-    
+
     public function challenge()
     {
         return $this->belongsTo(Challenge::class);
