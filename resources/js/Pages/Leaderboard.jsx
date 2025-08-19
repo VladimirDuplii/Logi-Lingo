@@ -17,20 +17,73 @@ const ScopeTabs = ({ scope, setScope }) => (
   </div>
 );
 
-const Row = ({ pos, name, xp, you }) => (
-  <div className={`flex items-center justify-between rounded-xl border p-3 ${you ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-white'}`}>
-    <div className="flex items-center gap-3">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-sm font-bold text-gray-600">{pos}</div>
-      <div className="min-w-0">
-        <div className="truncate text-sm font-semibold text-gray-800">{name}</div>
-        <div className="text-xs text-gray-500">{you ? 'You' : 'Learner'}</div>
+const leagues = [
+  { name: 'Bronze', min: 0, color: 'bg-amber-200 text-amber-800', chip: 'bg-amber-100 text-amber-700', emoji: '🥉' },
+  { name: 'Silver', min: 100, color: 'bg-gray-200 text-gray-800', chip: 'bg-gray-100 text-gray-700', emoji: '🥈' },
+  { name: 'Gold', min: 200, color: 'bg-yellow-200 text-yellow-800', chip: 'bg-yellow-100 text-yellow-700', emoji: '🥇' },
+  { name: 'Sapphire', min: 400, color: 'bg-blue-200 text-blue-800', chip: 'bg-blue-100 text-blue-700', emoji: '🔷' },
+  { name: 'Ruby', min: 700, color: 'bg-red-200 text-red-800', chip: 'bg-red-100 text-red-700', emoji: '🔴' },
+  { name: 'Emerald', min: 1000, color: 'bg-green-200 text-green-800', chip: 'bg-green-100 text-green-700', emoji: '🟢' },
+];
+
+const getLeague = (xp) => {
+  let curr = leagues[0];
+  for (const lg of leagues) {
+    if (xp >= lg.min) curr = lg; else break;
+  }
+  // next threshold
+  const idx = leagues.findIndex(l => l.name === curr.name);
+  const next = leagues[idx + 1] || null;
+  return { ...curr, nextMin: next?.min ?? null, nextName: next?.name ?? null };
+};
+
+const Medal = ({ pos }) => {
+  const map = { 1: '🥇', 2: '🥈', 3: '🥉' };
+  return map[pos] ? (
+    <span className="absolute -right-1 -top-1 select-none" title="Top placement">{map[pos]}</span>
+  ) : null;
+};
+
+const Avatar = ({ name, pos }) => {
+  const letter = (name || 'U').charAt(0).toUpperCase();
+  return (
+    <div className="relative">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 text-sm font-bold text-gray-600 ring-2 ring-white">
+        {letter}
+      </div>
+      <Medal pos={pos} />
+    </div>
+  );
+};
+
+const Row = ({ pos, name, xp, you, scope }) => {
+  const lg = scope === 'week' ? getLeague(xp) : null;
+  return (
+    <div className={`flex items-center justify-between rounded-xl border p-3 ${you ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-white'}`}>
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 text-sm font-bold text-gray-700 ring-1 ring-gray-200">
+          {pos}
+        </div>
+        <Avatar name={name} pos={pos} />
+        <div className="min-w-0">
+          <div className="truncate text-sm font-semibold text-gray-800">{name}</div>
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <span>{you ? 'You' : 'Learner'}</span>
+            {lg && (
+              <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 ${lg.chip}`}>
+                <span aria-hidden>{lg.emoji}</span>
+                <span>{lg.name}</span>
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+      <div className="text-right">
+        <div className="text-sm font-bold text-gray-900">{xp} XP</div>
       </div>
     </div>
-    <div className="text-right">
-      <div className="text-sm font-bold text-gray-900">{xp} XP</div>
-    </div>
-  </div>
-);
+  );
+};
 
 export default function Leaderboard({ auth }) {
   const [scope, setScope] = useState('week');
@@ -38,6 +91,7 @@ export default function Leaderboard({ auth }) {
   const [error, setError] = useState('');
   const [top, setTop] = useState([]);
   const [you, setYou] = useState({ xp: 0, rank: 0 });
+  const yourLeague = useMemo(() => scope === 'week' ? getLeague(you?.xp || 0) : null, [you, scope]);
 
   const load = async (sc) => {
     try {
@@ -64,6 +118,36 @@ export default function Leaderboard({ auth }) {
       <div className="w-full p-6">
         <h1 className="mb-1 text-2xl font-bold">Leaderboard</h1>
         <p className="mb-4 text-sm text-gray-500">Compete with others and climb the ranks.</p>
+        {scope === 'week' && (
+          <div className="mb-4 rounded-2xl border border-gray-200 bg-white p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-full text-lg font-bold ${yourLeague?.color || 'bg-gray-200 text-gray-700'}`}>
+                  <span aria-hidden>{yourLeague?.emoji || '🏆'}</span>
+                </div>
+                <div>
+                  <div className="text-sm font-semibold text-gray-800">Your League</div>
+                  <div className="text-xs text-gray-500">{yourLeague?.name || 'Unranked'}</div>
+                </div>
+              </div>
+              <div className="text-right text-sm font-semibold text-gray-800">{you?.xp || 0} XP this week</div>
+            </div>
+            {yourLeague?.nextMin != null && (
+              <div className="mt-3">
+                <div className="flex items-center justify-between text-xs text-gray-500">
+                  <span>Progress to {yourLeague.nextName}</span>
+                  <span>{Math.max(0, yourLeague.nextMin - (you?.xp || 0))} XP left</span>
+                </div>
+                <div className="mt-1 h-2 w-full rounded bg-gray-200">
+                  <div
+                    className="h-2 rounded bg-blue-500"
+                    style={{ width: `${Math.min(100, Math.round(((you?.xp || 0) - yourLeague.min) / Math.max(1, (yourLeague.nextMin - yourLeague.min)) * 100))}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
         <ScopeTabs scope={scope} setScope={setScope} />
         {loading ? (
           <div className="space-y-2">
@@ -80,7 +164,7 @@ export default function Leaderboard({ auth }) {
               <div className="text-sm text-gray-500">No entries yet.</div>
             ) : (
               top.map(item => (
-                <Row key={item.user_id} pos={item.position} name={item.name} xp={item.xp} you={item.is_you} />
+                <Row key={item.user_id} pos={item.position} name={item.name} xp={item.xp} you={item.is_you} scope={scope} />
               ))
             )}
             <div className="mt-4 rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-700">
