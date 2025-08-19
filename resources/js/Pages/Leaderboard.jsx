@@ -168,8 +168,11 @@ export default function Leaderboard({ auth }) {
               ))
             )}
             <div className="mt-4 rounded-xl border border-gray-200 bg-white p-3 text-sm text-gray-700">
-              Your weekly position: <span className="font-semibold">{you.rank || '-'}{scope==='all'?'':' / '}</span>
-              {scope==='week' && <span className="font-semibold">{you.xp} XP</span>}
+              {scope==='all' ? (
+                <>Your all time position: <span className="font-semibold">{you.rank || '-'}</span></>
+              ) : (
+                <>Your weekly position: <span className="font-semibold">{you.rank || '-'}</span> / <span className="font-semibold">{you.xp} XP</span></>
+              )}
             </div>
           </div>
         )}
