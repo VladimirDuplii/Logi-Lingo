@@ -169,6 +169,17 @@ const ProgressService = {
             console.error('Error updating daily goal:', error);
             throw error;
         }
+    },
+
+    // League info for the current user
+    getMyLeague: async () => {
+        try {
+            const response = await apiClient.get('/leaderboard/me');
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching league info:', error);
+            throw error;
+        }
     }
 };
 

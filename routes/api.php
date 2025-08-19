@@ -52,5 +52,6 @@ Route::prefix('v1')->group(function () {
 
     // Leaderboard
     Route::get('/leaderboard', [LeaderboardController::class, 'index']);
+    Route::get('/leaderboard/me', [LeaderboardController::class, 'me']);
     });
 });

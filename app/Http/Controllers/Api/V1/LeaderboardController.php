@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Api\V1\BaseApiController;
+use App\Models\LeagueTier;
+use App\Models\UserLeagueHistory;
+use App\Services\LeagueService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -120,5 +123,85 @@ class LeaderboardController extends BaseApiController
                 'rank' => $yourRank,
             ],
         ], 'All-time leaderboard');
+    }
+
+    /**
+     * GET /api/v1/leaderboard/me
+     * Returns current league (latest history or default) and last 12 weeks history
+     */
+    public function me(Request $request)
+    {
+        $userId = Auth::id();
+        LeagueService::ensureDefaultTiers();
+
+        // Latest history for the user
+        $latest = UserLeagueHistory::where('user_id', $userId)
+            ->orderByDesc('week_start')
+            ->first();
+
+        if ($latest) {
+            $tier = LeagueTier::find($latest->league_tier_id);
+            $current = [
+                'tier' => $tier ? [
+                    'id' => $tier->id,
+                    'name' => $tier->name,
+                    'rank' => (int) $tier->rank,
+                ] : null,
+                'week_start' => $latest->week_start,
+                'weekly_xp' => (int) $latest->weekly_xp,
+                'result' => $latest->result,
+            ];
+        } else {
+            // Default to lowest tier
+            $tier = LeagueTier::orderBy('rank')->first();
+            $current = [
+                'tier' => $tier ? [
+                    'id' => $tier->id,
+                    'name' => $tier->name,
+                    'rank' => (int) $tier->rank,
+                ] : null,
+                'week_start' => null,
+                'weekly_xp' => 0,
+                'result' => null,
+            ];
+        }
+
+        // This week's XP (live)
+        $start = Carbon::now()->startOfWeek();
+        $end = Carbon::now()->endOfWeek();
+        $thisWeekXp = (int) DB::table('challenge_progress')
+            ->where('user_id', $userId)
+            ->where('completed', true)
+            ->whereBetween('updated_at', [$start, $end])
+            ->count() * 10;
+
+        // History (last 12, newest first)
+        $hist = UserLeagueHistory::where('user_id', $userId)
+            ->orderByDesc('week_start')
+            ->limit(12)
+            ->get();
+        $tierMap = LeagueTier::all()->keyBy('id');
+        $history = $hist->map(function ($row) use ($tierMap) {
+            $tier = $tierMap->get($row->league_tier_id);
+            return [
+                'week_start' => $row->week_start,
+                'weekly_xp' => (int) $row->weekly_xp,
+                'result' => $row->result,
+                'tier' => $tier ? [
+                    'id' => $tier->id,
+                    'name' => $tier->name,
+                    'rank' => (int) $tier->rank,
+                ] : null,
+            ];
+        });
+
+        return $this->sendResponse([
+            'current' => $current,
+            'this_week' => [
+                'week_start' => $start->toDateString(),
+                'xp' => $thisWeekXp,
+            ],
+            'history' => $history,
+        ], 'Your league info');
     }
 }
