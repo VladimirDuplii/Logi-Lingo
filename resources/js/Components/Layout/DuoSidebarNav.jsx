@@ -115,6 +115,18 @@ export default function DuoSidebarNav({ current = "/" }) {
                     }
                 />
                 <NavItem
+                    href="/leaderboard"
+                    active={isActive("/leaderboard")}
+                    label="Leaderboard"
+                    icon={
+                        <svg width="46" height="46" viewBox="0 0 46 46" fill="none" className="h-[50px] w-[50px]">
+                            <rect x="8" y="26" width="8" height="12" rx="2" fill="#60A5FA" />
+                            <rect x="20" y="18" width="8" height="20" rx="2" fill="#34D399" />
+                            <rect x="32" y="22" width="8" height="16" rx="2" fill="#F59E0B" />
+                        </svg>
+                    }
+                />
+                <NavItem
                     href="/profile"
                     active={isActive("/profile")}
                     label="Profile"

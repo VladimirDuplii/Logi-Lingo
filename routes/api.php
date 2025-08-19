@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CourseController;
+use App\Http\Controllers\Api\V1\LeaderboardController;
 use App\Http\Controllers\Api\V1\ProgressController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -48,5 +49,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/progress/hearts/reduce/{challengeId}', [ProgressController::class, 'reduceHearts']);
         Route::post('/progress/hearts/refill', [ProgressController::class, 'refillHearts']);
     Route::post('/progress/hearts/refill-with-gems', [ProgressController::class, 'refillHeartsWithGems']);
+
+    // Leaderboard
+    Route::get('/leaderboard', [LeaderboardController::class, 'index']);
     });
 });

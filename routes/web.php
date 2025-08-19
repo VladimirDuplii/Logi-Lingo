@@ -61,6 +61,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/shop', function () {
         return Inertia::render('Shop');
     })->name('shop');
+
+    // Leaderboard
+    Route::get('/leaderboard', function () {
+        return Inertia::render('Leaderboard');
+    })->name('leaderboard');
 });
 
 require __DIR__ . '/auth.php';
