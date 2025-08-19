@@ -217,6 +217,28 @@ export default function RightCourseSidebar({
     const end = new Date(year, today.getMonth() + 1, 0);
     const days = Array.from({ length: end.getDate() }, (_, i) => i + 1);
     const [practicedDays, setPracticedDays] = useState([]);
+    // League info (compact)
+    const [lLoading, setLLoading] = useState(true);
+    const [lError, setLError] = useState('');
+    const [league, setLeague] = useState(null);
+
+    useEffect(() => {
+        let mounted = true;
+        (async () => {
+            try {
+                setLLoading(true);
+                setLError('');
+                const res = await ProgressService.getMyLeague?.();
+                const data = res?.data?.data || res?.data || res;
+                if (mounted) setLeague(data || null);
+            } catch (e) {
+                if (mounted) setLError(e?.response?.data?.message || '');
+            } finally {
+                if (mounted) setLLoading(false);
+            }
+        })();
+        return () => { mounted = false; };
+    }, []);
 
     useEffect(() => {
         // fetch practiced days when streak panel opens or month/year changes
@@ -466,6 +488,25 @@ export default function RightCourseSidebar({
                 </div>
             </SectionCard>
 
+            <SectionCard title="League">
+                {lLoading ? (
+                    <div className="h-6 w-40 animate-pulse rounded bg-gray-200" />
+                ) : lError ? (
+                    <div className="text-sm text-gray-500">Leagues initializing…</div>
+                ) : (
+                    <>
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <div className="text-sm font-semibold text-gray-800">{league?.current?.tier?.name || 'Unranked'}</div>
+                                <div className="text-xs text-gray-500">This week</div>
+                            </div>
+                            <div className="text-sm font-bold text-gray-900">{league?.this_week?.xp ?? 0} XP</div>
+                        </div>
+                        <a href="/leaderboard" className="mt-2 inline-block text-xs font-semibold text-blue-600 hover:text-blue-700">View leaderboard →</a>
+                    </>
+                )}
+            </SectionCard>
+
             <SectionCard title="Other Courses">
                 {loading ? (
                     <ul className="space-y-2 animate-pulse">
@@ -527,3 +568,6 @@ export default function RightCourseSidebar({
         </aside>
     );
 }
+
+// TODO(доробити): Піксельна синхронізація tiles/ring/tooltips та тултіпів — повернутися пізніше.
+// Додати a11y (ARIA, Esc/клік-поза-зоною), авто-тести сегментів і gating першого уроку.

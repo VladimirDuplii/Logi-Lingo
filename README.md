@@ -50,6 +50,8 @@ The project follows standard Laravel architecture with some additional component
 ### Admin Panel
 
 LogicLingo includes a powerful admin panel built with Filament that allows administrators to:
+## Leagues Scheduling
+Weekly promotions/demotions are processed by a scheduled command. See `docs/leagues-scheduling.md` for setup on Linux/Windows.
 
 -   Manage courses, units, lessons, and challenges
 -   Create and edit multiple-choice options for challenges

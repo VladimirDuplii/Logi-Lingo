@@ -339,7 +339,7 @@ class ProgressController extends BaseApiController
             ->orderBy('order', 'asc')
             ->get();
 
-        // Форматуємо дані, додаючи статус виконання для кожного уроку
+    // Форматуємо дані, додаючи статус виконання для кожного уроку
         $formattedUnits = $units->map(function ($unit) {
             $lessonsWithStatus = $unit->lessons->map(function ($lesson) {
                 $totalChallenges = $lesson->challenges->count();
@@ -350,6 +350,8 @@ class ProgressController extends BaseApiController
                             'completed_challenges' => 0,
                             'total_challenges' => 0,
                         ],
+            // Default 4 segments UI on the client; expose server hint
+            'segments' => [ 'total' => 4, 'filled' => 0 ],
                     ]);
                 }
 
@@ -366,12 +368,20 @@ class ProgressController extends BaseApiController
 
                 $allChallengesCompleted = ($completedCount >= $totalChallenges);
 
+                // Segmented ring hint (default 4 segments like Duolingo)
+                $ratio = $totalChallenges > 0 ? min(1, max(0, $completedCount / $totalChallenges)) : 0;
+                $segments = [
+                    'total' => 4,
+                    'filled' => (int) floor($ratio * 4),
+                ];
+
                 return array_merge($lesson->toArray(), [
                     'completed' => $allChallengesCompleted,
                     'progress' => [
                         'completed_challenges' => $completedCount,
                         'total_challenges' => $totalChallenges,
                     ],
+                    'segments' => $segments,
                 ]);
             });
 

@@ -86,12 +86,24 @@ const DuoUnitHeader = ({
     );
 };
 
-const DuoUnitSection = ({ unit, onStartLesson, completedCount }) => {
+const DuoUnitSection = ({ unit, onStartLesson, completedCount, prevUnitCompleted = true }) => {
     const [selectedTile, setSelectedTile] = useState(null);
+    const [lockedTipIndex, setLockedTipIndex] = useState(null);
+    const tipTimerRef = React.useRef(null);
     useEffect(() => {
-        const unselect = () => setSelectedTile(null);
+        const unselect = () => {
+            setSelectedTile(null);
+            setLockedTipIndex(null);
+            if (tipTimerRef.current) {
+                clearTimeout(tipTimerRef.current);
+                tipTimerRef.current = null;
+            }
+        };
         window.addEventListener("scroll", unselect);
-        return () => window.removeEventListener("scroll", unselect);
+        return () => {
+            window.removeEventListener("scroll", unselect);
+            if (tipTimerRef.current) clearTimeout(tipTimerRef.current);
+        };
     }, []);
 
     return (
@@ -105,11 +117,14 @@ const DuoUnitSection = ({ unit, onStartLesson, completedCount }) => {
             <div className="relative mb-8 mt-[20px] flex flex-col items-center gap-4">
                 {unit.tiles.map((tile, i) => {
                     const flatIndex = i; // since per unit mapping
-                    const status = computeTileStatus(
+                    let status = computeTileStatus(
                         flatIndex,
                         completedCount,
                         1
                     );
+                    // Gate the very first lesson of a unit until previous unit is fully completed
+                    if (i === 0 && !prevUnitCompleted) status = "LOCKED";
+                    const lockedMsg = i === 0 && !prevUnitCompleted ? "Заблоковано. Завершіть попередній юніт." : "Поки недоступно";
                     return (
                         <Fragment key={i}>
                             <div
@@ -122,25 +137,50 @@ const DuoUnitSection = ({ unit, onStartLesson, completedCount }) => {
                                     }),
                                 ].join(" ")}
                             >
+                                {/* Animated tooltip above ACTIVE tile */}
+                                {status === "ACTIVE" && (
+                                    <div className="pointer-events-none absolute -top-2 left-1/2 z-10 -translate-x-1/2 -translate-y-full">
+                                        <div className="mx-auto inline-flex items-center gap-1 rounded-full border border-yellow-200 bg-yellow-100 px-3 py-1 text-[12px] font-semibold text-yellow-800 shadow-sm animate-bounce">
+                                            <span aria-hidden>👉</span>
+                                            <span>Почати урок</span>
+                                        </div>
+                                        <div className="mx-auto mt-1 h-2.5 w-2.5 rotate-45 border border-yellow-200 bg-yellow-100" />
+                                    </div>
+                                )}
                                 <DuoTileButton
                                     type={tile.type}
                                     status={status}
                                     defaultColors={`${unit.borderColor} ${unit.backgroundColor}`}
-                                    ringPercent={(() => {
+                                    // Prefer backend-provided segments; fallback to computed quarters
+                                    ringSegmentsTotal={(() => {
+                                        const segTotal = tile.lesson?.segments?.total;
+                                        if (Number.isFinite(segTotal) && segTotal > 0) return segTotal;
+                                        return 4;
+                                    })()}
+                                    ringSegmentsFilled={(() => {
+                                        const segFilled = tile.lesson?.segments?.filled;
+                                        const segTotal = tile.lesson?.segments?.total;
+                                        if (Number.isFinite(segFilled) && Number.isFinite(segTotal)) {
+                                            return Math.max(0, Math.min(segFilled, segTotal));
+                                        }
                                         const l = tile.lesson;
-                                        const c =
-                                            l?.progress?.completed_challenges ??
-                                            0;
-                                        const t =
-                                            l?.progress?.total_challenges ?? 0;
-                                        return t > 0
-                                            ? Math.round((c / t) * 100)
-                                            : 0;
+                                        const c = l?.progress?.completed_challenges ?? 0;
+                                        const t = l?.progress?.total_challenges ?? 0;
+                                        if (!t) return 0;
+                                        const ratio = Math.max(0, Math.min(1, c / t));
+                                        return Math.max(0, Math.min(4, Math.floor(ratio * 4)));
                                     })()}
                                     onClick={() => {
-                                        if (tile.lesson)
+                                        if (status === "LOCKED") {
+                                            setLockedTipIndex(i);
+                                            if (tipTimerRef.current) clearTimeout(tipTimerRef.current);
+                                            tipTimerRef.current = setTimeout(() => setLockedTipIndex(null), 1800);
+                                            return;
+                                        }
+                                        if (tile.lesson && status !== "LOCKED") {
                                             onStartLesson(tile.lesson, unit);
-                                        setSelectedTile(i);
+                                            setSelectedTile(i);
+                                        }
                                     }}
                                 >
                                     <DuoTileIcon
@@ -148,6 +188,16 @@ const DuoUnitSection = ({ unit, onStartLesson, completedCount }) => {
                                         status={status}
                                     />
                                 </DuoTileButton>
+                                {/* Locked tooltip on click */}
+                                {status === "LOCKED" && lockedTipIndex === i && (
+                                    <div className="pointer-events-none absolute -top-2 left-1/2 z-10 -translate-x-1/2 -translate-y-full">
+                                        <div className="mx-auto inline-flex items-center gap-1 rounded-full border border-gray-200 bg-gray-100 px-3 py-1 text-[12px] font-semibold text-gray-700 shadow-sm">
+                                            <span aria-hidden>🔒</span>
+                                            <span>{lockedMsg}</span>
+                                        </div>
+                                        <div className="mx-auto mt-1 h-2.5 w-2.5 rotate-45 border border-gray-200 bg-gray-100" />
+                                    </div>
+                                )}
                             </div>
                         </Fragment>
                     );
@@ -214,30 +264,36 @@ const DuoLearn = ({ course, onUnitSelect, onLessonSelect }) => {
 
     return (
         <div className="flex max-w-5xl grow flex-col">
-            {units.map((unit) => (
-                <DuoUnitSection
-                    key={unit.unitNumber}
-                    unit={unit}
-                    completedCount={completedByUnit[unit.id] || 0}
-                    onStartLesson={(lesson, mappedUnit) => {
-                        // mappedUnit contains id/order/title copied from original
-                        if (onUnitSelect)
-                            onUnitSelect({
-                                id: mappedUnit.id,
-                                title: mappedUnit.title,
-                                order: mappedUnit.order,
-                                ...mappedUnit,
-                            });
-                        if (onLessonSelect)
-                            onLessonSelect(lesson, {
-                                id: mappedUnit.id,
-                                title: mappedUnit.title,
-                                order: mappedUnit.order,
-                                ...mappedUnit,
-                            });
-                    }}
-                />
-            ))}
+            {units.map((unit, idx) => {
+                const prev = idx > 0 ? units[idx - 1] : null;
+                const prevUnitLessons = prev ? (prev.lessons?.length || 0) : 0;
+                const prevCompleted = prev ? (completedByUnit[prev.id] || 0) : 0;
+                const prevUnitCompleted = prev ? prevCompleted >= prevUnitLessons && prevUnitLessons > 0 : true;
+                return (
+                    <DuoUnitSection
+                        key={unit.unitNumber}
+                        unit={unit}
+                        prevUnitCompleted={prevUnitCompleted}
+                        completedCount={completedByUnit[unit.id] || 0}
+                        onStartLesson={(lesson, mappedUnit) => {
+                            if (onUnitSelect)
+                                onUnitSelect({
+                                    id: mappedUnit.id,
+                                    title: mappedUnit.title,
+                                    order: mappedUnit.order,
+                                    ...mappedUnit,
+                                });
+                            if (onLessonSelect)
+                                onLessonSelect(lesson, {
+                                    id: mappedUnit.id,
+                                    title: mappedUnit.title,
+                                    order: mappedUnit.order,
+                                    ...mappedUnit,
+                                });
+                        }}
+                    />
+                );
+            })}
         </div>
     );
 };

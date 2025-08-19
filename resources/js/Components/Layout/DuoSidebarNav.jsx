@@ -27,7 +27,7 @@ export default function DuoSidebarNav({ current = "/" }) {
         >
             <a
                 className="mb-5 ml-5 mt-5 hidden text-3xl font-bold text-[#58cc02] lg:block"
-                href="/courses"
+                href="/dashboard"
             >
                 LogicLingo
             </a>

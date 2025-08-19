@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class LeaderboardController extends BaseApiController
 {
@@ -132,6 +133,37 @@ class LeaderboardController extends BaseApiController
     public function me(Request $request)
     {
         $userId = Auth::id();
+
+        // If league tables are not migrated yet, return a safe default to prevent 500s
+        $hasLeagueTiers = Schema::hasTable('league_tiers');
+        $hasHistory = Schema::hasTable('user_league_histories');
+        $hasChallenges = Schema::hasTable('challenge_progress');
+        if (!$hasLeagueTiers || !$hasHistory) {
+            $start = Carbon::now()->startOfWeek();
+            $end = Carbon::now()->endOfWeek();
+            $thisWeekXp = 0;
+            if ($hasChallenges && $userId) {
+                $thisWeekXp = (int) DB::table('challenge_progress')
+                    ->where('user_id', $userId)
+                    ->where('completed', true)
+                    ->whereBetween('updated_at', [$start, $end])
+                    ->count() * 10;
+            }
+            return $this->sendResponse([
+                'current' => [
+                    'tier' => [ 'id' => null, 'name' => 'Bronze', 'rank' => 1 ],
+                    'week_start' => null,
+                    'weekly_xp' => 0,
+                    'result' => null,
+                ],
+                'this_week' => [
+                    'week_start' => $start->toDateString(),
+                    'xp' => $thisWeekXp,
+                ],
+                'history' => [],
+            ], 'Leagues not initialized yet');
+        }
+
         LeagueService::ensureDefaultTiers();
 
         // Latest history for the user

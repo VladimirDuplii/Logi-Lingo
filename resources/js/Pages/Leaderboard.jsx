@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import DuoLayout from '@/Layouts/DuoLayout';
 import RightCourseSidebar from '@/Components/Layout/RightCourseSidebar';
 import apiClient from '@/Services/ApiService';
+import ProgressService from '@/Services/ProgressService';
 
 const ScopeTabs = ({ scope, setScope }) => (
   <div className="mb-4 flex gap-2 rounded-lg bg-gray-100 p-1 text-sm">
@@ -91,7 +92,19 @@ export default function Leaderboard({ auth }) {
   const [error, setError] = useState('');
   const [top, setTop] = useState([]);
   const [you, setYou] = useState({ xp: 0, rank: 0 });
-  const yourLeague = useMemo(() => scope === 'week' ? getLeague(you?.xp || 0) : null, [you, scope]);
+  const [myLeague, setMyLeague] = useState(null);
+  const yourLeague = useMemo(() => {
+    if (scope !== 'week') return null;
+    // Prefer server-provided tier name when available
+    if (myLeague?.current?.tier?.name) {
+      const serverTier = myLeague.current.tier.name;
+      const fallback = getLeague(you?.xp || 0);
+      // match by name if we have a known league
+      const found = leagues.find(l => l.name.toLowerCase() === serverTier.toLowerCase());
+      return found ? { ...found, nextMin: getLeague(you?.xp || 0).nextMin, nextName: getLeague(you?.xp || 0).nextName } : fallback;
+    }
+    return getLeague(you?.xp || 0);
+  }, [you, scope, myLeague]);
 
   const load = async (sc) => {
     try {
@@ -109,6 +122,19 @@ export default function Leaderboard({ auth }) {
   };
 
   useEffect(() => { load(scope); }, [scope]);
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const res = await ProgressService.getMyLeague?.();
+        const data = res?.data?.data || res?.data || res;
+        if (mounted) setMyLeague(data || null);
+      } catch (e) {
+        if (mounted) setMyLeague({ error: true });
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <DuoLayout
@@ -127,21 +153,24 @@ export default function Leaderboard({ auth }) {
                 </div>
                 <div>
                   <div className="text-sm font-semibold text-gray-800">Your League</div>
-                  <div className="text-xs text-gray-500">{yourLeague?.name || 'Unranked'}</div>
+                  <div className="text-xs text-gray-500">{myLeague?.current?.tier?.name || yourLeague?.name || 'Unranked'}</div>
                 </div>
               </div>
-              <div className="text-right text-sm font-semibold text-gray-800">{you?.xp || 0} XP this week</div>
+              <div className="text-right text-sm font-semibold text-gray-800">{myLeague?.this_week?.xp ?? you?.xp ?? 0} XP this week</div>
             </div>
+            {myLeague?.error && (
+              <div className="mt-2 text-xs text-gray-400">Leagues initializing…</div>
+            )}
             {yourLeague?.nextMin != null && (
               <div className="mt-3">
                 <div className="flex items-center justify-between text-xs text-gray-500">
                   <span>Progress to {yourLeague.nextName}</span>
-                  <span>{Math.max(0, yourLeague.nextMin - (you?.xp || 0))} XP left</span>
+                  <span>{Math.max(0, yourLeague.nextMin - ((myLeague?.this_week?.xp ?? you?.xp) || 0))} XP left</span>
                 </div>
                 <div className="mt-1 h-2 w-full rounded bg-gray-200">
                   <div
                     className="h-2 rounded bg-blue-500"
-                    style={{ width: `${Math.min(100, Math.round(((you?.xp || 0) - yourLeague.min) / Math.max(1, (yourLeague.nextMin - yourLeague.min)) * 100))}%` }}
+                    style={{ width: `${Math.min(100, Math.round(((((myLeague?.this_week?.xp ?? you?.xp) || 0) - yourLeague.min) / Math.max(1, (yourLeague.nextMin - yourLeague.min))) * 100))}%` }}
                   />
                 </div>
               </div>

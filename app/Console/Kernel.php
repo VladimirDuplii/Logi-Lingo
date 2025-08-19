@@ -14,7 +14,8 @@ class Kernel extends ConsoleKernel
 
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+    // Close leagues weekly: run early Monday morning (00:05)
+    $schedule->command('league:close-week')->weeklyOn(1, '00:05');
     }
 
     /**
