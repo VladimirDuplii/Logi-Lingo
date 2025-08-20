@@ -144,7 +144,7 @@ class CourseController extends BaseApiController
 
         $challenges = $lesson->challenges()
             ->with(['options' => function ($q) {
-                $q->orderBy('id');
+                $q->orderBy('position')->orderBy('id');
             }])
             ->orderBy('order')
             ->get()

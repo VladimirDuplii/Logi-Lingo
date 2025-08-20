@@ -97,7 +97,7 @@ class ChallengeOptionsRelationManager extends RelationManager
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->defaultSort('position')
+            ->defaultSort('position', 'asc')
             ->headerActions([
                 CreateAction::make()
                     ->label('Додати варіант відповіді'),
