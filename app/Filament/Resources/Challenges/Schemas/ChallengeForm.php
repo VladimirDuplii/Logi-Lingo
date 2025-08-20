@@ -13,7 +13,6 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
-use Filament\Forms\Get;
 use Filament\Schemas\Schema;
 
 class ChallengeForm
@@ -58,22 +57,10 @@ class ChallengeForm
                     ->label('Order')
                     ->required()
                     ->numeric()
-                    ->default(function (Get $get) {
-                        $lessonId = $get('lesson_id');
-                        if (!$lessonId) return 1;
-                        
-                        $maxOrder = Challenge::where('lesson_id', $lessonId)->max('order') ?? 0;
-                        return $maxOrder + 1;
-                    }),
+                    ->default(1),
                     
                 TextInput::make('audio_src')
-                    ->label('Audio Source')
-                    ->hidden(function (Get $get) {
-                        return $get('type') !== 'listen';
-                    })
-                    ->required(function (Get $get) {
-                        return $get('type') === 'listen';
-                    }),
+                    ->label('Audio Source'),
                     
                 FileUpload::make('image_src')
                     ->label('Image')
@@ -82,67 +69,14 @@ class ChallengeForm
                     ->directory('challenges')
                     ->visibility('public'),
                     
-                // Meta fields for 'speak' type
-                TextInput::make('meta.expected_text')
-                    ->label('Expected Text')
+                // Meta fields for different challenge types
+                Textarea::make('meta.expected_text')
+                    ->label('Expected Text (for speak challenges)')
                     ->hint('Leave empty to use question text as expected answer')
-                    ->hidden(function (Get $get) {
-                        return $get('type') !== 'speak';
-                    })
-                    ->columnSpanFull(),
-                    
-                // Meta fields for 'match' type
-                Repeater::make('meta.pairs')
-                    ->label('Match Pairs')
-                    ->schema([
-                        TextInput::make('left')
-                            ->label('Left Side')
-                            ->required(),
-                        TextInput::make('right')
-                            ->label('Right Side')
-                            ->required(),
-                    ])
-                    ->hidden(function (Get $get) {
-                        return $get('type') !== 'match';
-                    })
-                    ->minItems(1)
                     ->columnSpanFull(),
                     
                 // Hidden field to store other meta data
                 Hidden::make('meta.other'),
-            ])
-            ->afterValidation(function ($data) {
-                self::validateChallengeData($data);
-            });
-    }
-    
-    protected static function validateChallengeData(array $data): void
-    {
-        $type = $data['type'] ?? null;
-        
-        if ($type === 'match') {
-            $pairs = $data['meta']['pairs'] ?? [];
-            
-            if (empty($pairs)) {
-                throw new \Exception('Match challenges must have at least one pair.');
-            }
-            
-            $seenPairs = [];
-            foreach ($pairs as $pair) {
-                if (empty($pair['left']) || empty($pair['right'])) {
-                    throw new \Exception('All match pairs must have non-empty left and right values.');
-                }
-                
-                $pairKey = $pair['left'] . '|' . $pair['right'];
-                if (in_array($pairKey, $seenPairs)) {
-                    throw new \Exception('Duplicate match pairs are not allowed.');
-                }
-                $seenPairs[] = $pairKey;
-            }
-        }
-        
-        if ($type === 'listen' && empty($data['audio_src'])) {
-            throw new \Exception('Listen challenges must have an audio source.');
-        }
+            ]);
     }
 }

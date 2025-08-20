@@ -113,50 +113,14 @@ class ChallengesTable
                         'arrange' => 'Arrange',
                     ]),
             ])
-            ->defaultSort('lesson_id', 'asc')
-            ->additionalSort('order', 'asc')
+            ->defaultSort('lesson_id')
             ->reorderable('order')
-            ->reorderRecordsTriggerAction(
-                fn (BulkAction $action, Table $table) => $action
-                    ->label('Reorder challenges')
-                    ->modalHeading('Reorder challenges')
-                    ->modalDescription('Drag and drop the challenges to reorder them within their lesson.')
-                    ->modalSubmitActionLabel('Reorder')
-                    ->modalCancelActionLabel('Cancel')
-                    ->action(function (Collection $records, array $data) {
-                        // Group records by lesson_id and maintain order within each lesson
-                        $recordsByLesson = $records->groupBy('lesson_id');
-                        
-                        foreach ($recordsByLesson as $lessonId => $lessonChallenges) {
-                            $lessonChallenges->sortBy('order')->values()->each(function ($challenge, $index) {
-                                $challenge->update(['order' => $index + 1]);
-                            });
-                        }
-                    })
-            )
             ->recordActions([
                 EditAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
                     DeleteBulkAction::make(),
-                    BulkAction::make('renumber_order')
-                        ->label('Renumber order')
-                        ->icon('heroicon-o-arrow-path')
-                        ->color('warning')
-                        ->action(function (Collection $records) {
-                            // Group by lesson and renumber sequentially
-                            $recordsByLesson = $records->groupBy('lesson_id');
-                            
-                            foreach ($recordsByLesson as $lessonId => $lessonChallenges) {
-                                $lessonChallenges->sortBy('order')->values()->each(function ($challenge, $index) {
-                                    $challenge->update(['order' => $index + 1]);
-                                });
-                            }
-                        })
-                        ->requiresConfirmation()
-                        ->modalDescription('This will renumber the selected challenges sequentially within each lesson, starting from 1.')
-                        ->deselectRecordsAfterCompletion(),
                 ]),
             ]);
     }
