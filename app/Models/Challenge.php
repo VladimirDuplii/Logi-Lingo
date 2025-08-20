@@ -16,6 +16,11 @@ class Challenge extends Model
         'order',
         'audio_src',
         'image_src',
+        'meta',
+    ];
+
+    protected $casts = [
+        'meta' => 'array',
     ];
     
     public function lesson()

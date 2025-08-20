@@ -38,6 +38,10 @@ class ChallengeOptionsRelationManager extends RelationManager
                     ->label('Текст відповіді')
                     ->required()
                     ->columnSpanFull(),
+                TextInput::make('position')
+                    ->label('Позиція')
+                    ->numeric()
+                    ->helperText('Використовується для впорядкування правильної послідовності у вправах Arrange/Fill-blank.'),
                 Toggle::make('is_correct')
                     ->label('Правильна відповідь')
                     ->required(),
@@ -55,11 +59,16 @@ class ChallengeOptionsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
+            // If supported by your Filament version, enable drag-and-drop reordering by position
+            // ->reorderable('position')
             ->columns([
                 TextColumn::make('text')
                     ->label('Текст відповіді')
                     ->limit(30)
                     ->searchable(),
+                TextColumn::make('position')
+                    ->label('Позиція')
+                    ->sortable(),
                 IconColumn::make('is_correct')
                     ->label('Правильна')
                     ->boolean(),
@@ -88,6 +97,7 @@ class ChallengeOptionsRelationManager extends RelationManager
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->defaultSort('position')
             ->headerActions([
                 CreateAction::make()
                     ->label('Додати варіант відповіді'),

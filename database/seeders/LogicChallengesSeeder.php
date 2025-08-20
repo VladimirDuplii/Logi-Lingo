@@ -37,11 +37,11 @@ class LogicChallengesSeeder extends Seeder
         }
 
         // Helper to upsert a challenge with options
-        $seedChallenge = function (Lesson $lesson, int $order, string $question, array $options, string $type = 'SELECT') {
+        $seedChallenge = function (Lesson $lesson, int $order, string $question, array $options, string $type = 'select') {
             /** @var Challenge $challenge */
             $challenge = Challenge::updateOrCreate(
                 ['lesson_id' => $lesson->id, 'order' => $order],
-                ['type' => $type, 'question' => $question]
+                ['type' => strtolower($type), 'question' => $question]
             );
 
             // To keep it simple and idempotent, delete old options then recreate

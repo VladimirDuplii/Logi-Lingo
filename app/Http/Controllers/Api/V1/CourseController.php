@@ -155,15 +155,16 @@ class CourseController extends BaseApiController
                     'text' => $challenge->question,
                     'type' => $challenge->type,
                     'order' => $challenge->order,
-            'image_url' => $this->fileUrl($challenge->image_src),
-            'audio_url' => $this->fileUrl($challenge->audio_src),
+                    'image_url' => $this->fileUrl($challenge->image_src),
+                    'audio_url' => $this->fileUrl($challenge->audio_src),
+                    'meta' => $challenge->meta,
                     'options' => $challenge->options->map(function ($opt) {
                         return [
                             'id' => $opt->id,
                             'text' => $opt->text,
                             'is_correct' => (bool) $opt->is_correct,
-                'image_url' => $this->fileUrl($opt->image_src ?? null),
-                'audio_url' => $this->fileUrl($opt->audio_src ?? null),
+                            'image_url' => $this->fileUrl($opt->image_src ?? null),
+                            'audio_url' => $this->fileUrl($opt->audio_src ?? null),
                         ];
                     })->values()->all(),
                 ];

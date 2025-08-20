@@ -127,18 +127,22 @@ erDiagram
 ### challenges
 - `id`: Primary key
 - `lesson_id`: Foreign key to lessons
-- `type`: Challenge type (e.g., "SELECT", "ASSIST")
+- `type`: Challenge type (e.g., "select", "match", "fill-blank", "listen", "speak", "arrange")
 - `question`: The question text
 - `order`: Sequence order within the lesson
 - `audio_src`: Optional audio URL for listening exercises
 - `image_src`: Optional image URL for visual exercises
+- `meta`: JSON for type-specific data
+  - For `match`: `{ "pairs": [{ "left": "A", "right": "B" }, ...] }`
+  - For `speak`: `{ "expected_text": "Hello world" }`
 - `created_at`/`updated_at`: Standard timestamps
 
 ### challenge_options
 - `id`: Primary key
 - `challenge_id`: Foreign key to challenges
-- `text`: Option text
-- `is_correct`: Boolean indicating if this is the correct answer
+- `text`: Option text (used by select/arrange/fill-blank)
+- `position`: Optional integer to define the correct order (arrange/fill-blank)
+- `is_correct`: Boolean indicating if this is part of the correct answer
 - `audio_src`: Optional audio URL for this option
 - `image_src`: Optional image URL for this option
 - `created_at`/`updated_at`: Standard timestamps
