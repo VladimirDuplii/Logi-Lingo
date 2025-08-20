@@ -16,7 +16,28 @@ class Challenge extends Model
         'order',
         'audio_src',
         'image_src',
+        'meta',
     ];
+    
+    protected $casts = [
+        'meta' => 'array',
+    ];
+    
+    protected static function boot()
+    {
+        parent::boot();
+        
+        static::saving(function ($challenge) {
+            // Handle 'speak' type fallback
+            if ($challenge->type === 'speak') {
+                $meta = $challenge->meta ?? [];
+                if (empty($meta['expected_text'])) {
+                    $meta['expected_text'] = $challenge->question;
+                    $challenge->meta = $meta;
+                }
+            }
+        });
+    }
     
     public function lesson()
     {

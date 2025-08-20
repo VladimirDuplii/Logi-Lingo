@@ -13,6 +13,7 @@ class ChallengeOption extends Model
         'challenge_id',
         'text',
         'is_correct',
+        'position',
         'audio_src',
         'image_src',
     ];

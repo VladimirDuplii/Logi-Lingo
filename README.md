@@ -49,12 +49,31 @@ The project follows standard Laravel architecture with some additional component
 
 LogicLingo includes a powerful admin panel built with Filament that allows administrators to:
 
+#### Course Management
 - Manage courses, units, lessons, and challenges
-- Create and edit multiple-choice options for challenges
 - Upload media files for challenges including images and audio
-- Sort and organize content with intuitive interfaces
 - Control the order of lessons and challenges
 - Monitor user progress and subscriptions
+
+#### Challenge Management
+- **Drag & Drop Reordering**: Reorder challenges within lessons using intuitive drag-and-drop interface
+- **Bulk Actions**: Renumber challenge orders sequentially per lesson
+- **Advanced Filtering**: Filter challenges by Course → Unit → Lesson (cascading filters) and by challenge type
+- **Search**: Search challenges by question text for quick access
+
+#### Challenge Types & Validations
+The admin panel enforces data quality through type-specific validations:
+
+- **Select**: Ensures exactly one option is marked as correct
+- **Arrange/Fill-blank**: Requires at least 2 options; correct options must have unique numeric positions
+- **Match**: Validates that match pairs contain at least 1 pair with non-empty left/right values; prevents duplicate pairs
+- **Listen**: Requires audio source file
+- **Speak**: Automatically uses question text as expected answer if meta.expected_text is empty
+
+#### Options Management
+- **Auto-numbering**: New options automatically get the next available position number
+- **Position Normalization**: Automatically fixes duplicate or missing positions before saving
+- **Type-aware Interface**: Position fields only appear for arrange/fill-blank challenges
 
 ## Setup and Installation
 

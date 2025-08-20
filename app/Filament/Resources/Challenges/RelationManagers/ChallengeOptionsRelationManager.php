@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Challenges\RelationManagers;
 
 use App\Filament\Resources\ChallengeOptions\ChallengeOptionResource;
+use App\Models\ChallengeOption;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\CreateAction;
@@ -13,6 +14,7 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Forms\Get;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
@@ -41,6 +43,17 @@ class ChallengeOptionsRelationManager extends RelationManager
                 Toggle::make('is_correct')
                     ->label('Правильна відповідь')
                     ->required(),
+                TextInput::make('position')
+                    ->label('Позиція')
+                    ->numeric()
+                    ->default(function () {
+                        $challengeId = request()->route('record');
+                        if (!$challengeId) return 1;
+                        
+                        $maxPosition = ChallengeOption::where('challenge_id', $challengeId)
+                            ->max('position') ?? 0;
+                        return $maxPosition + 1;
+                    }),
                 TextInput::make('audio_src')
                     ->label('Шлях до аудіо'),
                 FileUpload::make('image_src')
@@ -49,7 +62,72 @@ class ChallengeOptionsRelationManager extends RelationManager
                     ->image()
                     ->directory('challenge-options')
                     ->visibility('public'),
-            ]);
+            ])
+            ->afterValidation(function ($data) {
+                $this->validateOptions($data);
+            });
+    }
+    
+    protected function validateOptions(array $data): void
+    {
+        $challenge = $this->getOwnerRecord();
+        $type = $challenge->type;
+        
+        // Get all options for this challenge (including the current one being edited)
+        $allOptions = ChallengeOption::where('challenge_id', $challenge->id)->get();
+        
+        if ($type === 'select') {
+            // Count how many correct options there will be after this update
+            $correctCount = $allOptions->where('is_correct', true)->count();
+            
+            // If this is a new option being created
+            if (!isset($data['id'])) {
+                if ($data['is_correct']) {
+                    $correctCount++;
+                }
+            } else {
+                // If this is an edit, adjust count
+                $existingOption = $allOptions->where('id', $data['id'])->first();
+                if ($existingOption) {
+                    if ($existingOption->is_correct && !$data['is_correct']) {
+                        $correctCount--;
+                    } elseif (!$existingOption->is_correct && $data['is_correct']) {
+                        $correctCount++;
+                    }
+                }
+            }
+            
+            if ($correctCount !== 1) {
+                throw new \Exception('Select challenges must have exactly one correct option.');
+            }
+        }
+        
+        if (in_array($type, ['arrange', 'fill-blank'])) {
+            if ($allOptions->count() < 2) {
+                throw new \Exception('Arrange/Fill-blank challenges must have at least 2 options.');
+            }
+            
+            // Check positions for correct options
+            if ($data['is_correct'] && empty($data['position'])) {
+                throw new \Exception('Correct options for arrange/fill-blank challenges must have a position.');
+            }
+            
+            // Check for duplicate positions among correct options
+            $positions = [];
+            foreach ($allOptions as $option) {
+                if ($option->is_correct && $option->position) {
+                    $positions[] = $option->position;
+                }
+            }
+            
+            if ($data['is_correct'] && $data['position']) {
+                $positions[] = $data['position'];
+            }
+            
+            if (count($positions) !== count(array_unique($positions))) {
+                throw new \Exception('Positions must be unique among correct options.');
+            }
+        }
     }
 
     public function table(Table $table): Table
@@ -63,6 +141,11 @@ class ChallengeOptionsRelationManager extends RelationManager
                 IconColumn::make('is_correct')
                     ->label('Правильна')
                     ->boolean(),
+                TextColumn::make('position')
+                    ->label('Позиція')
+                    ->numeric()
+                    ->sortable()
+                    ->toggleable(),
                 TextColumn::make('audio_src')
                     ->label('Аудіо')
                     ->toggleable(isToggledHiddenByDefault: true),
@@ -88,13 +171,30 @@ class ChallengeOptionsRelationManager extends RelationManager
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->defaultSort('position')
             ->headerActions([
                 CreateAction::make()
-                    ->label('Додати варіант відповіді'),
+                    ->label('Додати варіант відповіді')
+                    ->mutateFormDataUsing(function (array $data): array {
+                        // Auto-normalize positions before saving
+                        $this->normalizePositions($data);
+                        return $data;
+                    }),
+                Action::make('normalize_positions')
+                    ->label('Нормалізувати позиції')
+                    ->action(function () {
+                        $this->normalizeAllPositions();
+                    })
+                    ->color('warning'),
             ])
             ->actions([
                 EditAction::make()
-                    ->label('Редагувати'),
+                    ->label('Редагувати')
+                    ->mutateFormDataUsing(function (array $data): array {
+                        // Auto-normalize positions before saving
+                        $this->normalizePositions($data);
+                        return $data;
+                    }),
                 DeleteAction::make()
                     ->label('Видалити'),
             ])
@@ -104,5 +204,52 @@ class ChallengeOptionsRelationManager extends RelationManager
                         ->label('Видалити вибрані'),
                 ]),
             ]);
+    }
+    
+    protected function normalizePositions(array &$data): void
+    {
+        $challenge = $this->getOwnerRecord();
+        if (!in_array($challenge->type, ['arrange', 'fill-blank'])) {
+            return;
+        }
+        
+        // Get all correct options with positions
+        $correctOptions = ChallengeOption::where('challenge_id', $challenge->id)
+            ->where('is_correct', true)
+            ->whereNotNull('position')
+            ->orderBy('position')
+            ->get();
+        
+        // If this is a new correct option, add it to the list
+        if ($data['is_correct'] && !empty($data['position'])) {
+            $positions = $correctOptions->pluck('position')->toArray();
+            $positions[] = $data['position'];
+            $positions = array_unique($positions);
+            sort($positions);
+            
+            // Normalize to 1, 2, 3, ...
+            $normalizedPositions = array_values(array_map(fn($i) => $i + 1, array_keys($positions)));
+            $data['position'] = $normalizedPositions[array_search($data['position'], $positions)];
+        }
+    }
+    
+    protected function normalizeAllPositions(): void
+    {
+        $challenge = $this->getOwnerRecord();
+        if (!in_array($challenge->type, ['arrange', 'fill-blank'])) {
+            return;
+        }
+        
+        // Get all correct options with positions, ordered by current position
+        $correctOptions = ChallengeOption::where('challenge_id', $challenge->id)
+            ->where('is_correct', true)
+            ->whereNotNull('position')
+            ->orderBy('position')
+            ->get();
+        
+        // Renumber them sequentially starting from 1
+        foreach ($correctOptions as $index => $option) {
+            $option->update(['position' => $index + 1]);
+        }
     }
 }
