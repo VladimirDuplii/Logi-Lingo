@@ -99,19 +99,14 @@ export const DuoTileButton = ({
     ringSegmentsTotal,
     ringSegmentsFilled,
 }) => {
-    // Locked: grey tile without ring; Complete: yellow tile without ring; Active: colored with ring
+    // Exact colors from reference: locked/complete/active
     const colors = 
         status === "LOCKED"
-            ? "border-gray-300 bg-gray-200"
+            ? "border-[#b7b7b7] bg-[#e5e5e5]"
             : status === "COMPLETE"
-            ? "border-[#f4c300] bg-[#ffd83d]"
+            ? "border-yellow-500 bg-yellow-400"
             : defaultColors;
-    const pct = Math.max(0, Math.min(100, ringPercent));
-    // SVG circle dimensions
-    const size = 96; // closer to tile bounds for tight ring fit
-    const radius = 41; // tuned radius to sit just outside icon
-    const circumference = 2 * Math.PI * radius;
-    const dash = (pct / 100) * circumference;
+    
     const segTotal = Number.isFinite(ringSegmentsTotal)
         ? Math.max(0, Math.floor(ringSegmentsTotal))
         : undefined;
@@ -121,100 +116,131 @@ export const DuoTileButton = ({
     const segFilled = segTotal !== undefined
         ? Math.max(0, Math.min(segFilledRaw ?? 0, segTotal))
         : undefined;
-    // Segment geometry (when enabled)
-    const gapPx = 6; // tuned visual gap between segments
-    const segLen = segTotal && segTotal > 0 ? Math.max(1, (circumference - segTotal * gapPx) / segTotal) : 0;
-    const anim = status === "ACTIVE" ? "animate-pulse" : "";
+
     return (
-        <button
-            className={`relative m-3 h-[88px] w-[88px] rounded-full border-b-8 ${colors} ${anim} ${status === 'LOCKED' ? '' : 'hover:scale-[1.03] active:scale-[0.98]'} ${status === 'LOCKED' ? 'cursor-not-allowed' : 'cursor-pointer'} transition-transform duration-150 ease-out shadow-sm ring-1 ring-black/5 flex items-center justify-center`}
-            onClick={onClick}
-            aria-disabled={status === "LOCKED"}
+        <div className="relative h-[93px] w-[98px]">
+            {/* Progress ring - only for ACTIVE status */}
+            {status === "ACTIVE" && (
+                <LessonCompletionSvg 
+                    segmentsTotal={segTotal} 
+                    segmentsFilled={segFilled}
+                />
+            )}
+            
+            {/* Main tile button */}
+            <button
+                className={`absolute m-3 rounded-full border-b-8 p-4 ${colors} ${
+                    status === "LOCKED" ? "cursor-not-allowed" : "cursor-pointer"
+                }`}
+                onClick={onClick}
+                disabled={status === "LOCKED"}
+            >
+                {children}
+                
+                {/* Complete badge */}
+                {status === "COMPLETE" && (
+                    <div className="absolute -right-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-yellow-400 border-2 border-white">
+                        <CheckIcon className="h-5 w-5 text-white" />
+                    </div>
+                )}
+            </button>
+        </div>
+    );
+};
+
+// Progress ring component that matches reference exactly
+const LessonCompletionSvg = ({ segmentsTotal = 4, segmentsFilled = 0 }) => {
+    const size = 100;
+    const radius = 42;
+    const circumference = 2 * Math.PI * radius;
+    
+    if (segmentsTotal > 0) {
+        // Segmented ring
+        const gapAngle = 8; // degrees
+        const segmentAngle = (360 - segmentsTotal * gapAngle) / segmentsTotal;
+        
+        return (
+            <svg
+                viewBox="0 0 100 100"
+                className="absolute h-[93px] w-[98px]"
+                style={{ transitionDuration: "400ms" }}
+            >
+                <defs>
+                    {Array.from({ length: segmentsTotal }).map((_, i) => (
+                        <clipPath key={i} id={`clip-segment-${i}`}>
+                            <path
+                                d={`M 50,50 L 50,8 A 42,42 0 0,1 ${
+                                    50 + 42 * Math.sin((segmentAngle * Math.PI) / 180)
+                                },${
+                                    50 - 42 * Math.cos((segmentAngle * Math.PI) / 180)
+                                } Z`}
+                                transform={`rotate(${i * (segmentAngle + gapAngle)} 50 50)`}
+                            />
+                        </clipPath>
+                    ))}
+                </defs>
+                
+                {/* Background segments */}
+                {Array.from({ length: segmentsTotal }).map((_, i) => (
+                    <circle
+                        key={`bg-${i}`}
+                        cx="50"
+                        cy="50"
+                        r="42"
+                        fill="none"
+                        stroke="#e9edf3"
+                        strokeWidth="8"
+                        clipPath={`url(#clip-segment-${i})`}
+                    />
+                ))}
+                
+                {/* Filled segments */}
+                {Array.from({ length: segmentsFilled }).map((_, i) => (
+                    <circle
+                        key={`fill-${i}`}
+                        cx="50"
+                        cy="50"
+                        r="42"
+                        fill="none"
+                        stroke="rgb(255,200,0)"
+                        strokeWidth="8"
+                        clipPath={`url(#clip-segment-${i})`}
+                    />
+                ))}
+            </svg>
+        );
+    }
+    
+    // Continuous ring fallback
+    const strokeDasharray = `${(segmentsFilled / 4) * circumference} ${circumference}`;
+    
+    return (
+        <svg
+            viewBox="0 0 100 100"
+            className="absolute h-[93px] w-[98px]"
+            style={{ transitionDuration: "400ms" }}
         >
-            {status === 'ACTIVE' && (
-                // Segmented ring only for ACTIVE tiles (match reference behavior)
-                <svg
-                    width={size}
-                    height={size}
-                    viewBox={`0 0 ${size} ${size}`}
-                    className="absolute left-1/2 top-1/2 -z-10 -translate-x-1/2 -translate-y-1/2"
-                >
-                    {segTotal && segTotal > 0 ? (
-                        <>
-                            {/* Background segments */}
-                            <circle
-                                cx={size / 2}
-                                cy={size / 2}
-                                r={radius}
-                                stroke="#e9edf3"
-                                strokeWidth="8"
-                                fill="none"
-                                strokeDasharray={`${segLen} ${gapPx}`}
-                                transform={`rotate(-90 ${size / 2} ${size / 2})`}
-                                strokeLinecap="round"
-                            />
-                            {/* Filled segments (draw k individual arcs) */}
-                            {Array.from({ length: segFilled || 0 }).map((_, i) => (
-                                <circle
-                                    key={i}
-                                    cx={size / 2}
-                                    cy={size / 2}
-                                    r={radius}
-                                    stroke="#ffd43b"
-                                    strokeWidth="8"
-                                    fill="none"
-                                    strokeDasharray={`${segLen} ${circumference}`}
-                                    strokeDashoffset={-1 * (i * (segLen + gapPx))}
-                                    transform={`rotate(-90 ${size / 2} ${size / 2})`}
-                                    strokeLinecap="round"
-                                />
-                            ))}
-                        </>
-                    ) : (
-                        <>
-                            <circle
-                                cx={size / 2}
-                                cy={size / 2}
-                                r={radius}
-                                stroke="#e9edf3"
-                                strokeWidth="8"
-                                fill="none"
-                            />
-                            <circle
-                                cx={size / 2}
-                                cy={size / 2}
-                                r={radius}
-                                stroke="#ffd43b"
-                                strokeWidth="8"
-                                strokeDasharray={`${dash} ${circumference - dash}`}
-                                strokeLinecap="round"
-                                fill="none"
-                                transform={`rotate(-90 ${size / 2} ${size / 2})`}
-                            />
-                        </>
-                    )}
-                </svg>
-            )}
-            {/* glossy highlight */}
-            <span
-                aria-hidden
-                className="pointer-events-none absolute left-1/2 top-2 -z-0 -translate-x-1/2"
-                style={{
-                    width: '64%',
-                    height: '34%',
-                    borderRadius: '999px',
-                    background: 'radial-gradient(60% 60% at 50% 0%, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0) 75%)',
-                    filter: 'saturate(110%)',
-                }}
+            <circle
+                cx="50"
+                cy="50"
+                r="42"
+                fill="none"
+                stroke="#e9edf3"
+                strokeWidth="8"
             />
-            {/* COMPLETE overlay check */}
-            {status === "COMPLETE" && (
-                <span className="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full bg-green-500 text-white shadow-md ring-2 ring-white">
-                    <CheckIcon className="h-4 w-4" />
-                </span>
-            )}
-            {children}
-        </button>
+            <circle
+                cx="50"
+                cy="50"
+                r="42"
+                fill="none"
+                stroke="rgb(255,200,0)"
+                strokeWidth="8"
+                strokeDasharray={strokeDasharray}
+                strokeDashoffset="0"
+                transform="rotate(-90 50 50)"
+                strokeLinecap="round"
+            />
+        </svg>
     );
 };
 
