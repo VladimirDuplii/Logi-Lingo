@@ -83,6 +83,10 @@ LogicLingo includes a powerful admin panel built with Filament that allows admin
    ```
 7. Access the admin panel at `/admin`
 
+## Local Development
+
+See [docs/local-setup.md](docs/local-setup.md) for step-by-step instructions to run Logi‑Lingo locally (installation, env, migrations, seeding, running backend and frontend, admin panel and API testing).
+
 ## License
 
 The LogicLingo app is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
