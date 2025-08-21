@@ -266,34 +266,42 @@ class ProgressController extends BaseApiController
         $correct = (int) $request->integer('correct');
         $total = (int) $request->integer('total');
 
-        // Base completion bonus + flawless bonus
-        $xp = 10;
-        if ($total > 0 && $correct === $total) {
-            $xp += 10; // flawless bonus
-        }
+        // Define a simple pass threshold: require at least 60% correct (ceil), minimum 1 for any non-empty lesson
+        $passThreshold = max(1, (int) ceil($total * 0.6));
+        $passed = $correct >= $passThreshold;
 
-    $userProgress->points += $xp;
-        if (Schema::hasColumn('user_progress', 'gems')) {
-            // Award gems: flawless = 2, otherwise 1
-            $userProgress->gems = (int) ($userProgress->gems ?? 0) + ($total > 0 && $correct === $total ? 2 : 1);
-        }
-        $userProgress->save();
+        $xp = 0;
+        if ($passed) {
+            // Base completion bonus + flawless bonus
+            $xp = 10;
+            if ($total > 0 && $correct === $total) {
+                $xp += 10; // flawless bonus
+            }
 
-    // Track daily XP
-    $this->addDailyXp(Auth::id(), $xp);
+            // Persist points and optional gems
+            $userProgress->points += $xp;
+            if (Schema::hasColumn('user_progress', 'gems')) {
+                // Award gems: flawless = 2, otherwise 1
+                $userProgress->gems = (int) ($userProgress->gems ?? 0) + ($total > 0 && $correct === $total ? 2 : 1);
+            }
+            $userProgress->save();
 
-        // Mark all challenges in this lesson as completed for this user to unlock the next lesson
-        $challengeIds = $lesson->challenges()->pluck('id');
-        foreach ($challengeIds as $cid) {
-            ChallengeProgress::updateOrCreate(
-                [
-                    'user_id' => Auth::id(),
-                    'challenge_id' => $cid,
-                ],
-                [
-                    'completed' => true,
-                ]
-            );
+            // Track daily XP only when lesson is passed
+            $this->addDailyXp(Auth::id(), $xp);
+
+            // Mark all challenges in this lesson as completed for this user to unlock the next lesson
+            $challengeIds = $lesson->challenges()->pluck('id');
+            foreach ($challengeIds as $cid) {
+                ChallengeProgress::updateOrCreate(
+                    [
+                        'user_id' => Auth::id(),
+                        'challenge_id' => $cid,
+                    ],
+                    [
+                        'completed' => true,
+                    ]
+                );
+            }
         }
 
         return $this->sendResponse([
@@ -301,8 +309,11 @@ class ProgressController extends BaseApiController
             'points' => $userProgress->points,
             'gems' => Schema::hasColumn('user_progress', 'gems') ? (int) ($userProgress->gems ?? 0) : 0,
             'hearts' => $userProgress->hearts,
-            'lesson_completed' => true,
-        ], 'Lesson completed and points awarded.');
+            'lesson_completed' => $passed,
+            'pass_threshold' => $passThreshold,
+            'correct' => $correct,
+            'total' => $total,
+        ], $passed ? 'Lesson completed and points awarded.' : 'Lesson not passed. No completion bonus awarded.');
     }
 
     /**

@@ -485,10 +485,15 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
                         correctCount,
                         questions.length
                     );
-                    const xp = res?.data?.awarded_xp ?? res?.awarded_xp ?? null;
-                    if (xp != null) {
+                    const payload = res?.data ?? res;
+                    const xp = payload?.awarded_xp ?? null;
+                    const lessonPassed = payload?.lesson_completed === true;
+                    if (lessonPassed && xp != null) {
                         setAwardedXp(xp);
                         toast?.success?.(`Урок завершено: +${xp} XP`);
+                    } else {
+                        setAwardedXp(0);
+                        toast?.info?.("Урок не складено. Бонус XP не нараховано.");
                     }
                 } catch (_) {
                     /* ignore */
