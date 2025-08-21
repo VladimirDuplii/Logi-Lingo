@@ -15,6 +15,7 @@ class ChallengeOption extends Model
         'is_correct',
         'audio_src',
         'image_src',
+        'position',
     ];
 
     public function challenge()

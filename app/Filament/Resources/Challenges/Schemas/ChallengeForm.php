@@ -4,9 +4,12 @@ namespace App\Filament\Resources\Challenges\Schemas;
 
 use App\Models\Lesson;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Get;
 use Filament\Schemas\Schema;
 
 class ChallengeForm
@@ -21,6 +24,7 @@ class ChallengeForm
                     ->searchable()
                     ->required(),
                 Select::make('type')
+                    ->label('Type')
                     ->options([
                         'select' => 'Select',
                         'match' => 'Match',
@@ -31,18 +35,55 @@ class ChallengeForm
                     ])
                     ->required(),
                 Textarea::make('question')
+                    ->label('Question')
                     ->required()
                     ->columnSpanFull(),
                 TextInput::make('order')
                     ->required()
                     ->numeric()
                     ->default(1),
-                TextInput::make('audio_src'),
+                TextInput::make('audio_src')
+                    ->label('Audio path / URL')
+                    ->required(fn (Get $get) => $get('type') === 'listen'),
                 FileUpload::make('image_src')
                     ->disk('public')
                     ->image()
                     ->directory('challenges')
                     ->visibility('public'),
+
+                // Type-specific sections
+                Section::make('Match Pairs')
+                    ->visible(fn (Get $get) => $get('type') === 'match')
+                    ->schema([
+                        Repeater::make('meta.pairs')
+                            ->label('Pairs')
+                            ->schema([
+                                TextInput::make('left')->label('Left')->required(),
+                                TextInput::make('right')->label('Right')->required(),
+                            ])
+                            ->minItems(1)
+                            ->columnSpanFull(),
+                    ]),
+
+                Section::make('Speak Settings')
+                    ->visible(fn (Get $get) => $get('type') === 'speak')
+                    ->schema([
+                        Textarea::make('meta.expected_text')
+                            ->label('Expected phrase (optional)')
+                            ->helperText('If empty, the question text will be used as expected phrase.')
+                            ->columnSpanFull(),
+                    ]),
+
+                Section::make('Arrange / Fill in the blank')
+                    ->visible(fn (Get $get) => in_array($get('type'), ['arrange', 'fill-blank']))
+                    ->schema([
+                        Textarea::make('arrange_help')
+                            ->label('Instruction')
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->hint('Use the "Options" relation below to add tiles. Mark correct ones and set their position for the correct order.')
+                            ->columnSpanFull(),
+                    ]),
             ]);
     }
 }

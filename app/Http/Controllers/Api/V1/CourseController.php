@@ -181,11 +181,9 @@ class CourseController extends BaseApiController
         }
 
         $challenges = $lesson->challenges()
-            ->with([
-                'options' => function ($q) {
-                    $q->orderBy('id');
-                }
-            ])
+            ->with(['options' => function ($q) {
+                $q->orderBy('position')->orderBy('id');
+            }])
             ->orderBy('order')
             ->get()
             ->map(function ($challenge) {
@@ -197,6 +195,7 @@ class CourseController extends BaseApiController
                     'order' => $challenge->order,
                     'image_url' => $this->fileUrl($challenge->image_src),
                     'audio_url' => $this->fileUrl($challenge->audio_src),
+                    'meta' => $challenge->meta,
                     'options' => $challenge->options->map(function ($opt) {
                         return [
                             'id' => $opt->id,

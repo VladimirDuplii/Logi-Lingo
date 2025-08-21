@@ -49,6 +49,16 @@ The project follows standard Laravel architecture with some additional component
 
 ### Admin Panel
 
+The admin panel (Filament) now supports multiple challenge types out of the box:
+
+- Select: Standard multiple choice using options
+- Arrange / Fill in the blank: Use options as tiles; mark correct ones and set their order via the new "position" field
+- Match: Build pairs directly in the challenge form (stored in `meta.pairs`)
+- Listen: Requires audio; use `audio_src`
+- Speak: Optional expected phrase in `meta.expected_text`
+
+These enhancements are backward compatible. Existing select questions continue to work. The API now also returns a `meta` field for challenges.
+
 LogicLingo includes a powerful admin panel built with Filament that allows administrators to:
 ## Leagues Scheduling
 Weekly promotions/demotions are processed by a scheduled command. See `docs/leagues-scheduling.md` for setup on Linux/Windows.
