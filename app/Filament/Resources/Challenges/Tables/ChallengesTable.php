@@ -55,6 +55,20 @@ class ChallengesTable
                 TextColumn::make('question')
                     ->limit(30)
                     ->searchable(),
+
+                TextColumn::make('meta.pairs')
+                    ->label('Pairs')
+                    ->getStateUsing(function ($record) {
+                        if ($record->type !== 'match') return null;
+                        $pairs = $record->meta['pairs'] ?? [];
+                        if (!is_array($pairs) || empty($pairs)) return '-';
+                        $slice = array_slice($pairs, 0, 3);
+                        $txt = implode(', ', array_map(fn($p) => ($p['left'] ?? '?').'↔'.($p['right'] ?? '?'), $slice));
+                        $more = count($pairs) > 3 ? ' +' . (count($pairs) - 3) : '';
+                        return $txt . $more;
+                    })
+                    ->toggleable()
+                    ->wrap(),
                     
                 TextColumn::make('order')
                     ->numeric()
