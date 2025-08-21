@@ -12,6 +12,7 @@ use App\Models\ChallengeProgress;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Schema;
 
 class CourseController extends BaseApiController
 {
@@ -182,7 +183,11 @@ class CourseController extends BaseApiController
 
         $challenges = $lesson->challenges()
             ->with(['options' => function ($q) {
-                $q->orderBy('position')->orderBy('id');
+                if (Schema::hasColumn('challenge_options', 'position')) {
+                    $q->orderBy('position')->orderBy('id');
+                } else {
+                    $q->orderBy('id');
+                }
             }])
             ->orderBy('order')
             ->get()
