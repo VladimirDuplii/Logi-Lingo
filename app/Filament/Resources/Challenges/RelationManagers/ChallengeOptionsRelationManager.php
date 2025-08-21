@@ -65,6 +65,9 @@ class ChallengeOptionsRelationManager extends RelationManager
     {
         $challenge = $this->getOwnerRecord();
         $type = $challenge->type;
+        if ($type === 'match') {
+            throw new \Exception('Match type uses pairs (meta.pairs); options are not editable here.');
+        }
         
         // Get all options for this challenge (including the current one being edited)
         $allOptions = ChallengeOption::where('challenge_id', $challenge->id)->get();

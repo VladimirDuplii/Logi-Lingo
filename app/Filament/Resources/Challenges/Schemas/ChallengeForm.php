@@ -79,6 +79,8 @@ class ChallengeForm
                         TextInput::make('right')->label('Right')->required(),
                     ])
                     ->minItems(1)
+                    ->maxItems(20)
+                    ->hint('Add unique left/right pairs. Empty rows are ignored. Max 20.')
                     ->columnSpanFull(),
 
                 Textarea::make('meta.expected_text')
