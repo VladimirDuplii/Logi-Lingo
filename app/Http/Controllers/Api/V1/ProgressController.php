@@ -462,9 +462,25 @@ class ProgressController extends BaseApiController
                     $userProgress->gems = (int) ($userProgress->gems ?? 0) + 1; // bonus only once
                 }
             } else {
-                $awarded = 1; // practice repeat
+                // Practice repeat: enforce cooldown (e.g., 30s) before awarding 1 XP again
                 $practice = true;
-                $userProgress->points += $awarded;
+                $cooldownSeconds = 30;
+                $lastCompletion = ChallengeProgress::where('user_id', Auth::id())
+                    ->where('challenge_id', $challengeId)
+                    ->where('completed', true)
+                    ->orderByDesc('updated_at')
+                    ->skip(0)
+                    ->first();
+                $eligible = true;
+                if ($lastCompletion) {
+                    $eligible = Carbon::parse($lastCompletion->updated_at)->diffInSeconds(Carbon::now()) >= $cooldownSeconds;
+                }
+                if ($eligible) {
+                    $awarded = 1; // practice XP
+                    $userProgress->points += $awarded;
+                } else {
+                    $awarded = 0; // within cooldown
+                }
                 // no gems on practice
             }
             if ($awarded > 0) {

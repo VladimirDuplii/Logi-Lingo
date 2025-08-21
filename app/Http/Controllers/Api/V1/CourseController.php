@@ -181,6 +181,8 @@ class CourseController extends BaseApiController
             return $this->sendError('Lesson does not belong to this course/unit.', [], 404);
         }
 
+        $userId = Auth::id();
+        // Preload progress for efficiency
         $challenges = $lesson->challenges()
             ->with(['options' => function ($q) {
                 if (Schema::hasColumn('challenge_options', 'position')) {
@@ -188,10 +190,29 @@ class CourseController extends BaseApiController
                 } else {
                     $q->orderBy('id');
                 }
+            }, 'challengeProgress' => function ($q) use ($userId) {
+                $q->where('user_id', $userId)->orderByDesc('updated_at')->limit(5);
             }])
             ->orderBy('order')
             ->get()
-            ->map(function ($challenge) {
+            ->map(function ($challenge) use ($userId) {
+                // Compute practice stats: first_time_correct (bool), practice_correct (repeat completions), new_xp=10 if first correct else 0, practice_xp= count(repeat correct)*1
+                $progresses = $challenge->challengeProgress ?? collect();
+                $firstTime = null;
+                $repeatCount = 0;
+                foreach ($progresses->sortBy('created_at') as $p) {
+                    if ($p->completed) {
+                        if ($firstTime === null) {
+                            $firstTime = $p;
+                        } else {
+                            $repeatCount++;
+                        }
+                    }
+                }
+                $firstTimeCorrect = (bool) ($firstTime && $firstTime->completed);
+                $practiceCorrect = $repeatCount;
+                $newXp = $firstTimeCorrect ? 10 : 0;
+                $practiceXp = $practiceCorrect * 1;
                 return [
                     'id' => $challenge->id,
                     // Frontend expects `text` instead of `question`
@@ -201,6 +222,12 @@ class CourseController extends BaseApiController
                     'image_url' => $this->fileUrl($challenge->image_src),
                     'audio_url' => $this->fileUrl($challenge->audio_src),
                     'meta' => $challenge->meta,
+                    'practice_stats' => [
+                        'first_time_correct' => $firstTimeCorrect,
+                        'practice_correct' => $practiceCorrect,
+                        'new_xp' => $newXp,
+                        'practice_xp' => $practiceXp,
+                    ],
                     'options' => $challenge->options->map(function ($opt) {
                         return [
                             'id' => $opt->id,

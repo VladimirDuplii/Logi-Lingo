@@ -107,7 +107,12 @@ const CheckPanel = ({
                             <div className="hidden rounded-full bg-white p-5 text-green-500 sm:block">
                                 ✓
                             </div>
-                            <div className="text-2xl">Good job!</div>
+                                <div className="text-2xl">Good job!</div>
+                                {questionAwards[index]?.practice && (
+                                    <span className="inline-block rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-600">
+                                        Practice +{questionAwards[index].xp} XP
+                                    </span>
+                                )}
                         </div>
                     ) : (
                         <div className="mb-2 flex flex-col gap-5 sm:flex-row sm:items-center">
@@ -422,6 +427,7 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
     // Keep this state before any early returns to preserve hook order
     const [completed, setCompleted] = useState(false);
     const [awardedXp, setAwardedXp] = useState(null);
+    const [questionAwards, setQuestionAwards] = useState([]); // { xp, practice }
 
     useEffect(() => {
         let mounted = true;
@@ -532,7 +538,12 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
         try {
             const r = await ProgressService.updateChallengeProgress(q.id, correct);
             const awarded = r?.data?.awarded_xp ?? r?.awarded_xp ?? 0;
-            // Optionally we could reflect awarded XP per question; current total XP display already multiplies correct * 10 plus lesson bonus.
+            const practice = r?.data?.practice ?? r?.practice ?? false;
+            setQuestionAwards((arr) => {
+                const next = [...arr];
+                next[index] = { xp: awarded, practice };
+                return next;
+            });
             if (!correct) {
                 const r = await ProgressService.reduceHearts(q.id);
                 const newHearts = r?.data?.hearts ?? r?.hearts;
@@ -564,7 +575,8 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
     };
 
     if (completed) {
-        const displayXp = correctCount * 10 + (awardedXp ?? 0);
+        const questionTotal = questionAwards.reduce((s, qa) => s + (qa?.xp || 0), 0);
+        const displayXp = questionTotal + (awardedXp ?? 0);
         return (
             <LessonComplete
                 correct={correctCount}
