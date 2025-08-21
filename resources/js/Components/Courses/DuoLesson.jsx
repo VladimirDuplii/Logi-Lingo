@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { CourseService, ProgressService } from "../../Services";
 import { useToast } from "@/Components/Toast";
 
@@ -270,48 +271,133 @@ const WriteIn = ({ question, selectedIndices, setSelectedIndices }) => {
     );
 };
 
+// Lightweight confetti (no extra deps); shared style injected once
+const ensureConfettiStyles = () => {
+    if (document.getElementById("confetti-keyframes")) return;
+    const style = document.createElement("style");
+    style.id = "confetti-keyframes";
+    style.textContent = `@keyframes confetti-pop { 0%{transform:translate(0,0) scale(0.6) rotate(0deg); opacity:1} 80%{opacity:1} 100%{transform:translate(var(--dx), var(--dy)) scale(1) rotate(360deg); opacity:0} }`;
+    document.head.appendChild(style);
+};
+
+const launchConfetti = (count = 36) => {
+    ensureConfettiStyles();
+    const colors = ["#f97316", "#f59e0b", "#10b981", "#3b82f6", "#a855f7", "#ef4444"];
+    const container = document.createElement("div");
+    container.style.position = "fixed";
+    container.style.inset = "0";
+    container.style.pointerEvents = "none";
+    container.style.zIndex = "9999";
+    document.body.appendChild(container);
+    const { innerWidth: w, innerHeight: h } = window;
+    const cx = w / 2, cy = h / 4; // start a bit above center
+    for (let i = 0; i < count; i++) {
+        const s = document.createElement("span");
+        const size = Math.random() * 8 + 6;
+        const dx = (Math.random() - 0.5) * w * 0.9;
+        const dy = Math.random() * h * 0.9 + h * 0.1;
+        s.style.position = "absolute";
+        s.style.left = `${cx}px`;
+        s.style.top = `${cy}px`;
+        s.style.width = `${size}px`;
+        s.style.height = `${size * 0.6}px`;
+        s.style.borderRadius = "2px";
+        s.style.transform = "translate(-50%, -50%)";
+        s.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        s.style.setProperty("--dx", `${dx}px`);
+        s.style.setProperty("--dy", `${dy}px`);
+        s.style.animation = `confetti-pop ${700 + Math.random() * 500}ms ease-out forwards`;
+        container.appendChild(s);
+    }
+    setTimeout(() => container.remove(), 1600);
+};
+
+const useCountUp = (to = 0, durationMs = 800) => {
+    const [val, setVal] = useState(0);
+    useEffect(() => {
+        const start = performance.now();
+        let raf;
+        const tick = (t) => {
+            const p = Math.min(1, (t - start) / durationMs);
+            setVal(Math.round(p * to));
+            if (p < 1) raf = requestAnimationFrame(tick);
+        };
+        raf = requestAnimationFrame(tick);
+        return () => cancelAnimationFrame(raf);
+    }, [to, durationMs]);
+    return val;
+};
+
 const LessonComplete = ({ correct, total, onExit, displayXp }) => {
+    const [fired, setFired] = useState(false);
+    const xp = useCountUp(Math.max(0, Number(displayXp) || 0), 900);
+    const acc = useCountUp(Math.round((correct / Math.max(total, 1)) * 100), 900);
+
+    useEffect(() => {
+        if (!fired) {
+            setFired(true);
+            launchConfetti(40);
+        }
+    }, [fired]);
+
     return (
         <div className="flex min-h-screen flex-col gap-5">
             <div className="flex grow flex-col items-center justify-center gap-8 font-bold">
-                <h1 className="text-center text-3xl text-yellow-400">
+                <motion.h1
+                    className="text-center text-3xl text-yellow-400"
+                    initial={{ scale: 0.6, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ type: "spring", stiffness: 180, damping: 12 }}
+                >
                     Lesson Complete!
-                </h1>
+                </motion.h1>
                 <div className="flex flex-wrap justify-center gap-5">
-                    <div className="min-w-[110px] rounded-xl border-2 border-yellow-400 bg-yellow-400">
-                        <h2 className="py-1 text-center text-white">
-                            Total XP
-                        </h2>
-                        <div className="flex justify-center rounded-xl bg-white py-4 text-yellow-400">
-                            {displayXp}
+                    <motion.div
+                        className="min-w-[140px] rounded-xl border-2 border-yellow-400 bg-yellow-400"
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.05 }}
+                    >
+                        <h2 className="py-1 text-center text-white">Total XP</h2>
+                        <div className="flex justify-center rounded-xl bg-white py-5 text-3xl text-yellow-400">
+                            {xp}
                         </div>
-                    </div>
-                    <div className="min-w-[110px] rounded-xl border-2 border-green-400 bg-green-400">
-                        <h2 className="py-1 text-center text-white">
-                            Accuracy
-                        </h2>
-                        <div className="flex justify-center rounded-xl bg-white py-4 text-green-400">
-                            {Math.round((correct / Math.max(total, 1)) * 100)}%
+                    </motion.div>
+                    <motion.div
+                        className="min-w-[140px] rounded-xl border-2 border-green-400 bg-green-400"
+                        initial={{ y: 20, opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        transition={{ delay: 0.15 }}
+                    >
+                        <h2 className="py-1 text-center text-white">Accuracy</h2>
+                        <div className="flex justify-center rounded-xl bg-white py-5 text-3xl text-green-400">
+                            {acc}%
                         </div>
-                    </div>
+                    </motion.div>
                 </div>
             </div>
             <section className="border-gray-200 sm:border-t-2 sm:p-10">
                 <div className="mx-auto flex max-w-5xl sm:justify-between">
-                    <button
+                    <motion.button
                         className="hidden rounded-2xl border-2 border-b-4 border-gray-200 bg-white p-3 font-bold uppercase text-gray-400 transition hover:border-gray-300 hover:bg-gray-200 sm:block sm:min-w-[150px] sm:max-w-fit"
                         onClick={onExit}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
                     >
                         Review lesson
-                    </button>
-                    <button
+                    </motion.button>
+                    <motion.button
                         className={
                             "flex w-full items-center justify-center rounded-2xl border-b-4 border-green-600 bg-green-500 p-3 font-bold uppercase text-white transition hover:brightness-105 sm:min-w-[150px] sm:max-w-fit"
                         }
                         onClick={onExit}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.25 }}
                     >
                         Continue
-                    </button>
+                    </motion.button>
                 </div>
             </section>
         </div>
