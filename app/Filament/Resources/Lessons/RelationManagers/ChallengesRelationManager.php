@@ -3,11 +3,14 @@
 namespace App\Filament\Resources\Lessons\RelationManagers;
 
 use App\Models\Challenge;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\DeleteAction;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -25,10 +28,17 @@ class ChallengesRelationManager extends RelationManager
     {
         return $schema
             ->schema([
-                TextInput::make('type')
+                Select::make('type')
                     ->label('Тип')
-                    ->required()
-                    ->maxLength(50),
+                    ->options([
+                        'select' => 'Select',
+                        'match' => 'Match',
+                        'fill-blank' => 'Fill in the blank',
+                        'listen' => 'Listen',
+                        'speak' => 'Speak',
+                        'arrange' => 'Arrange',
+                    ])
+                    ->required(),
                 Textarea::make('question')
                     ->label('Питання')
                     ->required()
@@ -43,6 +53,9 @@ class ChallengesRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(function ($query) {
+                return $query->withCount('options');
+            })
             ->columns([
                 TextColumn::make('order')
                     ->label('№')
@@ -52,13 +65,42 @@ class ChallengesRelationManager extends RelationManager
                     ->label('Тип')
                     ->badge()
                     ->sortable(),
+                TextColumn::make('options_count')
+                    ->label('Опцій')
+                    ->numeric()
+                    ->sortable(),
                 TextColumn::make('question')
                     ->label('Питання')
                     ->limit(60)
                     ->searchable(),
             ])
             ->defaultSort('order')
-            ->headerActions([])
+            ->reorderable('order')
+            ->filters([
+                SelectFilter::make('type')
+                    ->label('Тип')
+                    ->options([
+                        'select' => 'Select',
+                        'match' => 'Match',
+                        'fill-blank' => 'Fill in the blank',
+                        'listen' => 'Listen',
+                        'speak' => 'Speak',
+                        'arrange' => 'Arrange',
+                    ]),
+            ])
+            ->headerActions([
+                CreateAction::make()
+                    ->label('Створити завдання')
+                    ->mutateFormDataUsing(function (array $data): array {
+                        $lessonId = $this->getOwnerRecord()->id;
+                        $data['lesson_id'] = $lessonId;
+                        if (empty($data['order'])) {
+                            $max = \App\Models\Challenge::where('lesson_id', $lessonId)->max('order') ?? 0;
+                            $data['order'] = $max + 1;
+                        }
+                        return $data;
+                    }),
+            ])
             ->actions([
                 EditAction::make(),
                 DeleteAction::make(),
