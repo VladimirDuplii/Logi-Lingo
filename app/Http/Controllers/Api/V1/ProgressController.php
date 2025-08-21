@@ -425,6 +425,13 @@ class ProgressController extends BaseApiController
             return $this->sendError('Challenge not found.');
         }
 
+        // Fetch existing progress first to detect practice (repeat) completions
+        $existing = ChallengeProgress::where('user_id', Auth::id())
+            ->where('challenge_id', $challengeId)
+            ->first();
+
+        $wasCompleted = $existing && $existing->completed;
+
         $progress = ChallengeProgress::updateOrCreate(
             [
                 'user_id' => Auth::id(),
@@ -435,24 +442,41 @@ class ProgressController extends BaseApiController
             ]
         );
 
-        // Якщо завдання виконане успішно, додаємо бали користувачу (створюємо запис при необхідності)
+        // Award logic:
+        // - First time completion => 10 XP (+1 gem if available)
+        // - Subsequent correct (practice) completions => 1 XP, no gems
+        $awarded = 0;
+        $practice = false;
+
         $userProgress = UserProgress::firstOrCreate(
             ['user_id' => Auth::id()],
             ['hearts' => 5, 'points' => 0]
         );
         $userProgress = $this->normalizeUserProgress($userProgress);
+
         if ($request->completed) {
-            $userProgress->points += 10;
-            if (Schema::hasColumn('user_progress', 'gems')) {
-                $userProgress->gems = (int) ($userProgress->gems ?? 0) + 1;
+            if (!$wasCompleted) {
+                $awarded = 10; // first completion
+                $userProgress->points += $awarded;
+                if (Schema::hasColumn('user_progress', 'gems')) {
+                    $userProgress->gems = (int) ($userProgress->gems ?? 0) + 1; // bonus only once
+                }
+            } else {
+                $awarded = 1; // practice repeat
+                $practice = true;
+                $userProgress->points += $awarded;
+                // no gems on practice
             }
-            $userProgress->save();
-            // Track daily XP
-            $this->addDailyXp(Auth::id(), 10);
+            if ($awarded > 0) {
+                $userProgress->save();
+                $this->addDailyXp(Auth::id(), $awarded);
+            }
         }
 
         return $this->sendResponse([
             'progress' => $progress,
+            'awarded_xp' => $awarded,
+            'practice' => $practice,
             'points' => $userProgress?->points,
             'gems' => Schema::hasColumn('user_progress', 'gems') ? $userProgress?->gems : 0,
             'hearts' => $userProgress?->hearts,

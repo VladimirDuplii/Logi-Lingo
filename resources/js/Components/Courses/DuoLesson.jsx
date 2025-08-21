@@ -530,7 +530,9 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
         setCorrectShown(true);
 
         try {
-            await ProgressService.updateChallengeProgress(q.id, correct);
+            const r = await ProgressService.updateChallengeProgress(q.id, correct);
+            const awarded = r?.data?.awarded_xp ?? r?.awarded_xp ?? 0;
+            // Optionally we could reflect awarded XP per question; current total XP display already multiplies correct * 10 plus lesson bonus.
             if (!correct) {
                 const r = await ProgressService.reduceHearts(q.id);
                 const newHearts = r?.data?.hearts ?? r?.hearts;
