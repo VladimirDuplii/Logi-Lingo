@@ -49,26 +49,41 @@ The project follows standard Laravel architecture with some additional component
 
 ### Admin Panel
 
-The admin panel (Filament) now supports multiple challenge types out of the box:
+The admin panel (Filament) supports multiple challenge types and data validations out of the box:
 
 - Select: Standard multiple choice using options
 - Arrange / Fill in the blank: Use options as tiles; mark correct ones and set their order via the new "position" field
 - Match: Build pairs directly in the challenge form (stored in `meta.pairs`)
 - Listen: Requires audio; use `audio_src`
-- Speak: Optional expected phrase in `meta.expected_text`
+- Speak: Optional expected phrase in `meta.expected_text` (falls back to question text)
 
-These enhancements are backward compatible. Existing select questions continue to work. The API now also returns a `meta` field for challenges.
+These enhancements are backward compatible. Existing select questions continue to work. The API also returns a `meta` field for challenges.
 
-LogicLingo includes a powerful admin panel built with Filament that allows administrators to:
-## Leagues Scheduling
-Weekly promotions/demotions are processed by a scheduled command. See `docs/leagues-scheduling.md` for setup on Linux/Windows.
+#### Course Management
+- Manage courses, units, lessons, and challenges
+- Upload media files for challenges including images and audio
+- Control the order of lessons and challenges
+- Monitor user progress and subscriptions
 
--   Manage courses, units, lessons, and challenges
--   Create and edit multiple-choice options for challenges
--   Upload media files for challenges including images and audio
--   Sort and organize content with intuitive interfaces
--   Control the order of lessons and challenges
--   Monitor user progress and subscriptions
+#### Challenge Management
+- **Drag & Drop Reordering**: Reorder challenges within lessons using intuitive drag-and-drop interface
+- **Bulk Actions**: Renumber challenge orders sequentially per lesson
+- **Advanced Filtering**: Filter challenges by Course → Unit → Lesson (cascading filters) and by challenge type
+- **Search**: Search challenges by question text for quick access
+
+#### Challenge Types & Validations
+The admin panel enforces data quality through type-specific validations:
+
+- **Select**: Ensures exactly one option is marked as correct
+- **Arrange/Fill-blank**: Requires at least 2 options; correct options must have unique numeric positions
+- **Match**: Validates that match pairs contain at least 1 pair with non-empty left/right values; prevents duplicate pairs
+- **Listen**: Requires audio source file
+- **Speak**: Automatically uses question text as expected answer if meta.expected_text is empty
+
+#### Options Management
+- **Auto-numbering**: New options automatically get the next available position number
+- **Position Normalization**: Automatically fixes duplicate or missing positions before saving
+- **Type-aware Interface**: Position fields only appear for arrange/fill-blank challenges
 
 ## Setup and Installation
 

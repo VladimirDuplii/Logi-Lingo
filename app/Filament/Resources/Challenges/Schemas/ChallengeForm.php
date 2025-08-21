@@ -2,7 +2,10 @@
 
 namespace App\Filament\Resources\Challenges\Schemas;
 
+use App\Models\Challenge;
+use App\Models\Course;
 use App\Models\Lesson;
+use App\Models\Unit;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Section;
@@ -20,9 +23,20 @@ class ChallengeForm
             ->components([
                 Select::make('lesson_id')
                     ->label('Lesson')
-                    ->options(Lesson::pluck('title', 'id'))
+                    ->options(function () {
+                        return Lesson::with('unit.course')
+                            ->get()
+                            ->mapWithKeys(function ($lesson) {
+                                $courseTitle = $lesson->unit->course->title ?? 'No Course';
+                                $unitTitle = $lesson->unit->title ?? 'No Unit';
+                                $label = "{$courseTitle} > {$unitTitle} > {$lesson->title}";
+                                return [$lesson->id => $label];
+                            });
+                    })
                     ->searchable()
-                    ->required(),
+                    ->required()
+                    ->live(),
+                    
                 Select::make('type')
                     ->label('Type')
                     ->options([
@@ -33,12 +47,16 @@ class ChallengeForm
                         'speak' => 'Speak',
                         'arrange' => 'Arrange',
                     ])
-                    ->required(),
+                    ->required()
+                    ->live(),
+                    
                 Textarea::make('question')
                     ->label('Question')
                     ->required()
                     ->columnSpanFull(),
+                    
                 TextInput::make('order')
+                    ->label('Order')
                     ->required()
                     ->numeric()
                     ->default(1),
@@ -46,11 +64,12 @@ class ChallengeForm
                     ->label('Audio path / URL')
                     ->required(fn (Get $get) => $get('type') === 'listen'),
                 FileUpload::make('image_src')
+                    ->label('Image')
                     ->disk('public')
                     ->image()
                     ->directory('challenges')
                     ->visibility('public'),
-
+                
                 // Type-specific sections
                 Section::make('Match Pairs')
                     ->visible(fn (Get $get) => $get('type') === 'match')
