@@ -21,6 +21,7 @@ use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Facades\Schema as DbSchema;
 
 class ChallengeOptionsRelationManager extends RelationManager
 {
@@ -128,48 +129,55 @@ class ChallengeOptionsRelationManager extends RelationManager
 
     public function table(Table $table): Table
     {
-        return $table
-            ->columns([
-                TextColumn::make('text')
-                    ->label('Текст відповіді')
-                    ->limit(30)
-                    ->searchable(),
+        $hasPosition = DbSchema::hasColumn('challenge_options', 'position');
+        $columns = [
+            TextColumn::make('text')
+                ->label('Текст відповіді')
+                ->limit(30)
+                ->searchable(),
+            IconColumn::make('is_correct')
+                ->label('Правильна')
+                ->boolean(),
+            TextColumn::make('audio_src')
+                ->label('Аудіо')
+                ->toggleable(isToggledHiddenByDefault: true),
+            ImageColumn::make('image_src')
+                ->label('Зображення')
+                ->disk('public')
+                ->getStateUsing(function ($record) {
+                    $p = ltrim((string) ($record->image_src ?? ''), '/');
+                    if ($p === '')
+                        return $p;
+                    if (str_starts_with($p, 'storage/'))
+                        $p = substr($p, 8);
+                    if (str_starts_with($p, 'public/'))
+                        $p = substr($p, 7);
+                    return $p; // relative path resolved via public disk
+                })
+                ->toggleable(),
+            TextColumn::make('created_at')
+                ->label('Створено')
+                ->dateTime()
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true),
+            TextColumn::make('updated_at')
+                ->label('Оновлено')
+                ->dateTime()
+                ->sortable()
+                ->toggleable(isToggledHiddenByDefault: true),
+        ];
+        if ($hasPosition) {
+            // Insert position column after text for clarity
+            array_splice($columns, 1, 0, [
                 TextColumn::make('position')
                     ->label('Позиція')
                     ->numeric()
                     ->sortable(),
-                IconColumn::make('is_correct')
-                    ->label('Правильна')
-                    ->boolean(),
-                TextColumn::make('audio_src')
-                    ->label('Аудіо')
-                    ->toggleable(isToggledHiddenByDefault: true),
-                ImageColumn::make('image_src')
-                    ->label('Зображення')
-                    ->disk('public')
-                    ->getStateUsing(function ($record) {
-                        $p = ltrim((string) ($record->image_src ?? ''), '/');
-                        if ($p === '')
-                            return $p;
-                        if (str_starts_with($p, 'storage/'))
-                            $p = substr($p, 8);
-                        if (str_starts_with($p, 'public/'))
-                            $p = substr($p, 7);
-                        return $p; // relative path resolved via public disk
-                    })
-                    ->toggleable(),
-                TextColumn::make('created_at')
-                    ->label('Створено')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->label('Оновлено')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->defaultSort('position', 'asc')
+            ]);
+        }
+
+        $table = $table
+            ->columns($columns)
             ->headerActions([
                 CreateAction::make()
                     ->label('Додати варіант відповіді')
@@ -202,11 +210,19 @@ class ChallengeOptionsRelationManager extends RelationManager
                         ->label('Видалити вибрані'),
                 ]),
             ]);
+        // Apply default sort by position only when column exists
+        if ($hasPosition ?? false) {
+            $table = $table->defaultSort('position', 'asc');
+        }
+        return $table;
     }
     
     protected function normalizePositions(array &$data): void
     {
         $challenge = $this->getOwnerRecord();
+        if (!DbSchema::hasColumn('challenge_options', 'position')) {
+            return; // column absent: skip normalization silently
+        }
         if (!in_array($challenge->type, ['arrange', 'fill-blank'])) {
             return;
         }
@@ -234,6 +250,9 @@ class ChallengeOptionsRelationManager extends RelationManager
     protected function normalizeAllPositions(): void
     {
         $challenge = $this->getOwnerRecord();
+        if (!DbSchema::hasColumn('challenge_options', 'position')) {
+            return; // column absent: skip renumbering
+        }
         if (!in_array($challenge->type, ['arrange', 'fill-blank'])) {
             return;
         }

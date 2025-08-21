@@ -9,6 +9,7 @@ use App\Models\Course;
 use App\Models\Lesson;
 use App\Models\Unit;
 use App\Models\UserProgress;
+use App\Models\XpEvent;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,6 +31,25 @@ class ProgressController extends BaseApiController
         // Expire at end of day
         $ttl = $today->copy()->endOfDay();
         Cache::put($key, $current + $amount, $ttl);
+    }
+    /**
+     * Write a granular XP ledger event (safe no-op if table missing or amount <= 0)
+     */
+    protected function logXpEvent(int $userId, int $amount, string $sourceType, ?int $sourceId = null, array $meta = []): void
+    {
+        if ($amount <= 0) return;
+        if (!Schema::hasTable('xp_events')) return; // migrations may not be run yet
+        try {
+            XpEvent::create([
+                'user_id' => $userId,
+                'source_type' => $sourceType,
+                'source_id' => $sourceId,
+                'amount' => $amount,
+                'meta' => $meta ?: null,
+            ]);
+        } catch (\Throwable $e) {
+            // swallow silently; analytics not critical for UX
+        }
     }
     /** Ensure hearts and points are initialized */
     protected function normalizeUserProgress(UserProgress $progress): UserProgress
@@ -53,6 +73,18 @@ class ProgressController extends BaseApiController
         if (Schema::hasColumn('user_progress', 'streak')) {
             if (!is_int($progress->streak ?? null)) {
                 $progress->streak = is_numeric($progress->streak ?? null) ? (int) $progress->streak : 0;
+                $changed = true;
+            }
+        }
+        if (Schema::hasColumn('user_progress', 'max_streak')) {
+            if (!is_int($progress->max_streak ?? null)) {
+                $progress->max_streak = is_numeric($progress->max_streak ?? null) ? (int) $progress->max_streak : 0;
+                $changed = true;
+            }
+        }
+        if (Schema::hasColumn('user_progress', 'streak_freezes')) {
+            if (!is_int($progress->streak_freezes ?? null)) {
+                $progress->streak_freezes = is_numeric($progress->streak_freezes ?? null) ? (int) $progress->streak_freezes : 0;
                 $changed = true;
             }
         }
@@ -83,6 +115,11 @@ class ProgressController extends BaseApiController
         if ($hasStreak && $hasLast) {
             $yesterday = Carbon::yesterday();
             $last = $userProgress->last_activity_date ? Carbon::parse($userProgress->last_activity_date) : null;
+            $hasFreezeMeta = Schema::hasColumn('user_progress', 'streak_freezes') && Schema::hasColumn('user_progress', 'streak_frozen_until');
+            $freezeActive = false;
+            if ($hasFreezeMeta && $userProgress->streak_frozen_until) {
+                $freezeActive = Carbon::parse($userProgress->streak_frozen_until)->isSameDay($today);
+            }
             if (!$last) {
                 // start streak on first activity
                 $userProgress->streak = max(1, (int) ($userProgress->streak ?? 0));
@@ -91,9 +128,20 @@ class ProgressController extends BaseApiController
             } elseif ($last->isSameDay($yesterday)) {
                 $userProgress->streak = (int) ($userProgress->streak ?? 0) + 1;
             } else {
-                $userProgress->streak = 1; // reset and start again
+                // Gap detected. If freeze available and not used today -> consume one to preserve streak
+                if ($hasFreezeMeta && (int) ($userProgress->streak_freezes ?? 0) > 0 && !$freezeActive) {
+                    $userProgress->streak_freezes = (int) $userProgress->streak_freezes - 1;
+                    $userProgress->streak_frozen_until = $today->toDateString(); // protect until end of today
+                    $freezeActive = true; // keep streak unchanged
+                } else {
+                    $userProgress->streak = 1; // reset and start again
+                }
             }
             $userProgress->last_activity_date = $today->toDateString();
+            // Track max streak
+            if (Schema::hasColumn('user_progress', 'max_streak')) {
+                $userProgress->max_streak = max((int) ($userProgress->max_streak ?? 0), (int) ($userProgress->streak ?? 0));
+            }
             $userProgress->save();
         }
 
@@ -102,6 +150,15 @@ class ProgressController extends BaseApiController
             ->where('completed', true)
             ->whereDate('updated_at', '>=', $today)
             ->count();
+
+        // Guarantee minimum streak = 1 if user has any activity today
+        if ($answeredToday > 0 && $hasStreak && $hasLast) {
+            if ((int) ($userProgress->streak ?? 0) < 1) {
+                $userProgress->streak = 1;
+                $userProgress->last_activity_date = $today->toDateString();
+                $userProgress->save();
+            }
+        }
 
         // Lessons completed today: infer by challenges all-complete updated today per lesson
         $lessonIds = Lesson::pluck('id');
@@ -125,12 +182,22 @@ class ProgressController extends BaseApiController
         // XP earned today from cache-based ledger
         $xpKey = 'daily_xp_' . $userId . '_' . $today->toDateString();
         $xpToday = (int) Cache::get($xpKey, 0);
-        // Fallback: if cache is empty, approximate from today's progress and hydrate cache
+        // Fallback / hydrate from ledger or approximation
         if ($xpToday <= 0) {
-            $approx = ($answeredToday * 10) + ($lessonsCompletedToday * 10);
-            if ($approx > 0) {
-                $xpToday = $approx;
-                Cache::put($xpKey, $xpToday, $today->copy()->endOfDay());
+            if (Schema::hasTable('xp_events')) {
+                $xpToday = (int) XpEvent::where('user_id', $userId)
+                    ->whereDate('created_at', $today)
+                    ->sum('amount');
+                if ($xpToday > 0) {
+                    Cache::put($xpKey, $xpToday, $today->copy()->endOfDay());
+                }
+            }
+            if ($xpToday <= 0) { // legacy approximation
+                $approx = ($answeredToday * 10) + ($lessonsCompletedToday * 10);
+                if ($approx > 0) {
+                    $xpToday = $approx;
+                    Cache::put($xpKey, $xpToday, $today->copy()->endOfDay());
+                }
             }
         }
 
@@ -170,6 +237,14 @@ class ProgressController extends BaseApiController
             'hearts' => (int) $userProgress->hearts,
             'date' => $today->toDateString(),
             'streak' => Schema::hasColumn('user_progress', 'streak') ? (int) ($userProgress->streak ?? 0) : 0,
+            'max_streak' => Schema::hasColumn('user_progress', 'max_streak') ? (int) ($userProgress->max_streak ?? 0) : null,
+            'next_record_in_days' => (Schema::hasColumn('user_progress', 'max_streak') && Schema::hasColumn('user_progress', 'streak'))
+                ? max(0, ((int) ($userProgress->max_streak ?? 0) + 1) - (int) ($userProgress->streak ?? 0))
+                : null,
+            'streak_freezes' => Schema::hasColumn('user_progress', 'streak_freezes') ? (int) ($userProgress->streak_freezes ?? 0) : null,
+            'streak_freeze_active_today' => Schema::hasColumn('user_progress', 'streak_frozen_until') && $userProgress->streak_frozen_until
+                ? Carbon::parse($userProgress->streak_frozen_until)->isSameDay($today)
+                : false,
             'daily_goal_xp' => $goal,
         ], 'Daily quests summary');
     }
@@ -288,6 +363,12 @@ class ProgressController extends BaseApiController
 
             // Track daily XP only when lesson is passed
             $this->addDailyXp(Auth::id(), $xp);
+            // Ledger (capture both base + flawless as single event)
+            $this->logXpEvent(Auth::id(), $xp, 'lesson_completion', $lesson->id, [
+                'correct' => $correct,
+                'total' => $total,
+                'flawless' => $total > 0 && $correct === $total,
+            ]);
 
             // Mark all challenges in this lesson as completed for this user to unlock the next lesson
             $challengeIds = $lesson->challenges()->pluck('id');
@@ -486,6 +567,13 @@ class ProgressController extends BaseApiController
             if ($awarded > 0) {
                 $userProgress->save();
                 $this->addDailyXp(Auth::id(), $awarded);
+                $this->logXpEvent(
+                    Auth::id(),
+                    $awarded,
+                    !$wasCompleted ? 'challenge_first' : 'challenge_practice',
+                    $challenge->id,
+                    ['practice' => $practice]
+                );
             }
         }
 
@@ -568,7 +656,7 @@ class ProgressController extends BaseApiController
      */
     public function refillHeartsWithGems()
     {
-        // Ensure gems column exists
+        // Ensure gems feature
         if (!Schema::hasColumn('user_progress', 'gems')) {
             return $this->sendError('Gems feature is not available. Run migrations.', [], 503);
         }
@@ -599,6 +687,44 @@ class ProgressController extends BaseApiController
             'gems' => (int) $userProgress->gems,
             'points' => (int) $userProgress->points,
         ], 'Hearts refilled using gems.');
+    }
+
+    /**
+     * Purchase a streak freeze (prevents streak loss for one missed day) using gems.
+     * Default cost: 10 gems (can override by sending { cost: <int> } but minimum 1 and max 100 to prevent abuse)
+     */
+    public function purchaseStreakFreeze(Request $request)
+    {
+        if (!Schema::hasColumn('user_progress', 'streak_freezes') || !Schema::hasColumn('user_progress', 'streak_frozen_until')) {
+            return $this->sendError('Streak freeze feature unavailable. Run migrations.', [], 503);
+        }
+        if (!Schema::hasColumn('user_progress', 'gems')) {
+            return $this->sendError('Gems currency unavailable.', [], 503);
+        }
+        $cost = (int) $request->input('cost', 10);
+        if ($cost < 1) $cost = 1; elseif ($cost > 100) $cost = 100; // clamp
+
+        $userProgress = UserProgress::where('user_id', Auth::id())->first();
+        if (!$userProgress) {
+            return $this->sendError('User progress not found.');
+        }
+        $userProgress = $this->normalizeUserProgress($userProgress);
+
+        if ((int) ($userProgress->gems ?? 0) < $cost) {
+            return $this->sendError('Not enough gems.', [], 400);
+        }
+
+        // Deduct and grant freeze
+        $userProgress->gems = (int) $userProgress->gems - $cost;
+        $userProgress->streak_freezes = (int) ($userProgress->streak_freezes ?? 0) + 1;
+        $userProgress->save();
+
+        return $this->sendResponse([
+            'gems' => (int) $userProgress->gems,
+            'streak_freezes' => (int) $userProgress->streak_freezes,
+            'streak' => Schema::hasColumn('user_progress', 'streak') ? (int) ($userProgress->streak ?? 0) : null,
+            'max_streak' => Schema::hasColumn('user_progress', 'max_streak') ? (int) ($userProgress->max_streak ?? 0) : null,
+        ], 'Streak freeze purchased.');
     }
 
     /**

@@ -75,12 +75,34 @@ class ChallengeForm
                     ->label('Match Pairs')
                     ->visible(fn ($get) => $get('type') === 'match')
                     ->schema([
-                        TextInput::make('left')->label('Left')->required(),
-                        TextInput::make('right')->label('Right')->required(),
+                        TextInput::make('left')
+                            ->label('Left Text')
+                            ->requiredWithout('left_image')
+                            ->maxLength(120)
+                            ->helperText('Text OR image required.'),
+                        FileUpload::make('left_image')
+                            ->label('Left Image')
+                            ->disk('public')
+                            ->image()
+                            ->directory('match_pairs')
+                            ->visibility('public')
+                            ->imageEditor(false)
+                            ->helperText('Optional. Overrides left text display if set.'),
+                        TextInput::make('right')
+                            ->label('Right Text')
+                            ->requiredWithout('right_image')
+                            ->maxLength(120),
+                        FileUpload::make('right_image')
+                            ->label('Right Image')
+                            ->disk('public')
+                            ->image()
+                            ->directory('match_pairs')
+                            ->visibility('public')
+                            ->imageEditor(false),
                     ])
                     ->minItems(1)
                     ->maxItems(20)
-                    ->hint('Add unique left/right pairs. Empty rows are ignored. Max 20.')
+                    ->hint('Provide either text or an image (or both) for each side. Max 20 pairs.')
                     ->columnSpanFull(),
 
                 Textarea::make('meta.expected_text')

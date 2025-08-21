@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class Challenge extends Model
 {
@@ -27,6 +28,16 @@ class Challenge extends Model
         parent::boot();
 
         static::saving(function ($challenge) {
+            // If meta column not yet migrated, avoid touching or persisting it
+            $hasMeta = Schema::hasColumn('challenges', 'meta');
+            if (!$hasMeta) {
+                // Ensure attribute not sent in insert/update
+                if (array_key_exists('meta', $challenge->getAttributes())) {
+                    unset($challenge->meta);
+                }
+                // Still allow saving other fields
+                return;
+            }
             // Handle 'speak' type fallback
             if ($challenge->type === 'speak') {
                 $meta = $challenge->meta ?? [];
@@ -46,18 +57,26 @@ class Challenge extends Model
                 $seen = [];
                 foreach ($pairs as $pair) {
                     if (!is_array($pair)) continue;
-                    $left = isset($pair['left']) ? trim((string)$pair['left']) : '';
-                    $right = isset($pair['right']) ? trim((string)$pair['right']) : '';
-                    if ($left === '' || $right === '') continue; // skip incomplete
-                    $key = mb_strtolower($left.'|'.$right);
-                    if (isset($seen[$key])) continue; // enforce uniqueness
+                    $leftText = isset($pair['left']) ? trim((string)$pair['left']) : '';
+                    $rightText = isset($pair['right']) ? trim((string)$pair['right']) : '';
+                    $leftImage = isset($pair['left_image']) ? trim((string)$pair['left_image']) : '';
+                    $rightImage = isset($pair['right_image']) ? trim((string)$pair['right_image']) : '';
+                    // Accept if we have at least something on each side (text or image)
+                    if (($leftText === '' && $leftImage === '') || ($rightText === '' && $rightImage === '')) continue;
+                    // Use composite key to enforce uniqueness by text+image path
+                    $key = mb_strtolower(($leftText ?: $leftImage).'|'.($rightText ?: $rightImage));
+                    if (isset($seen[$key])) continue;
                     $seen[$key] = true;
-                    $clean[] = ['left' => $left, 'right' => $right];
+                    $clean[] = [
+                        'left' => $leftText,
+                        'right' => $rightText,
+                        'left_image' => $leftImage ?: null,
+                        'right_image' => $rightImage ?: null,
+                    ];
                 }
                 if (count($clean) === 0) {
-                    throw new \Exception('Match challenges require at least one valid pair (left & right).');
+                    throw new \Exception('Match challenges require at least one valid pair (text or image on each side).');
                 }
-                // Enforce reasonable cap
                 if (count($clean) > 20) {
                     $clean = array_slice($clean, 0, 20);
                 }

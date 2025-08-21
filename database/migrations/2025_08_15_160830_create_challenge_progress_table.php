@@ -11,14 +11,24 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('challenge_progress')) {
+            // Table already created by earlier migration; ensure unique index exists
+            try {
+                Schema::table('challenge_progress', function (Blueprint $table) {
+                    $table->unique(['user_id', 'challenge_id']);
+                });
+            } catch (\Throwable $e) {
+                // Ignore if index already exists or cannot be added without DBAL
+            }
+            return;
+        }
+
         Schema::create('challenge_progress', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained();
-            $table->foreignId('challenge_id')->constrained();
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('challenge_id')->constrained()->onDelete('cascade');
             $table->boolean('completed')->default(false);
             $table->timestamps();
-            
-            // Створення унікального індексу для запобігання дублікатам
             $table->unique(['user_id', 'challenge_id']);
         });
     }

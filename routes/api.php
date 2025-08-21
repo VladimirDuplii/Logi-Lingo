@@ -49,6 +49,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/progress/hearts/reduce/{challengeId}', [ProgressController::class, 'reduceHearts']);
         Route::post('/progress/hearts/refill', [ProgressController::class, 'refillHearts']);
     Route::post('/progress/hearts/refill-with-gems', [ProgressController::class, 'refillHeartsWithGems']);
+    Route::post('/progress/streak/purchase-freeze', [ProgressController::class, 'purchaseStreakFreeze']);
 
     // Leaderboard
     Route::get('/leaderboard', [LeaderboardController::class, 'index']);

@@ -63,6 +63,7 @@ const CheckPanel = ({
     onCheckAnswer,
     onFinish,
     onSkip,
+    award,
 }) => {
     return (
         <>
@@ -107,12 +108,13 @@ const CheckPanel = ({
                             <div className="hidden rounded-full bg-white p-5 text-green-500 sm:block">
                                 ✓
                             </div>
-                                <div className="text-2xl">Good job!</div>
-                                {questionAwards[index]?.practice && (
-                                    <span className="inline-block rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-600">
-                                        Practice +{questionAwards[index].xp} XP
-                                    </span>
-                                )}
+                                <div className="text-2xl flex items-center gap-3">Good job!
+                                    {award?.practice && award?.xp > 0 && (
+                                        <span className="inline-block rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-600">
+                                            Practice +{award.xp} XP
+                                        </span>
+                                    )}
+                                </div>
                         </div>
                     ) : (
                         <div className="mb-2 flex flex-col gap-5 sm:flex-row sm:items-center">
@@ -156,7 +158,7 @@ const MultipleChoice = ({ question, selected, setSelected }) => {
     const baseCols = count <= 2 ? "grid-cols-2" : "grid-cols-2"; // on very small screens keep 2 per row
     return (
         <section className="flex max-w-2xl grow flex-col gap-5 self-center sm:items-center sm:justify-center sm:gap-24 sm:px-5">
-            <h1 className="self-start text-2xl font-bold sm:text-3xl">
+            <h1 className="w-full text-center text-2xl font-bold sm:text-3xl">
                 {question.text}
             </h1>
             {question.image_url ? (
@@ -276,6 +278,166 @@ const WriteIn = ({ question, selectedIndices, setSelectedIndices }) => {
     );
 };
 
+// Match Pairs component (find matching pairs between two shuffled columns) with optional images
+const MatchPairs = ({ question, onAllMatched, onMismatch }) => {
+    const pairs = Array.isArray(question?.meta?.pairs) ? question.meta.pairs : [];
+    // Build left/right arrays with stable ids & image refs
+    const baseLeft = useMemo(
+        () => pairs.map((p, i) => ({ id: 'L' + i, value: p.left, image: p.left_image || null, pairIndex: i })),
+        [pairs]
+    );
+    const baseRight = useMemo(
+        () => pairs.map((p, i) => ({ id: 'R' + i, value: p.right, image: p.right_image || null, pairIndex: i })),
+        [pairs]
+    );
+    const [shuffleTick, setShuffleTick] = useState(0);
+    const [selectedLeft, setSelectedLeft] = useState(null); // id
+    const [selectedRight, setSelectedRight] = useState(null); // id
+    const [matchedIds, setMatchedIds] = useState(new Set()); // store both left & right ids
+    const [attemptResult, setAttemptResult] = useState(null); // 'ok' | 'bad' | null
+
+    // Derive shuffled lists (only shuffle unmatched items; keep matched at top for clarity)
+    const shuffledLeft = useMemo(() => {
+        const matched = baseLeft.filter(i => matchedIds.has(i.id));
+        const unmatched = baseLeft.filter(i => !matchedIds.has(i.id));
+        const shuffledUnmatched = [...unmatched].sort(() => Math.random() - 0.5);
+        return [...matched, ...shuffledUnmatched];
+    }, [baseLeft, shuffleTick, matchedIds]);
+    const shuffledRight = useMemo(() => {
+        const matched = baseRight.filter(i => matchedIds.has(i.id));
+        const unmatched = baseRight.filter(i => !matchedIds.has(i.id));
+        const shuffledUnmatched = [...unmatched].sort(() => Math.random() - 0.5);
+        return [...matched, ...shuffledUnmatched];
+    }, [baseRight, shuffleTick, matchedIds]);
+
+    useEffect(() => {
+        if (pairs.length > 0 && matchedIds.size >= pairs.length * 2) {
+            onAllMatched?.();
+        }
+    }, [matchedIds, pairs.length, onAllMatched]);
+
+    // Reset when question changes
+    useEffect(() => {
+        setSelectedLeft(null);
+        setSelectedRight(null);
+        setMatchedIds(new Set());
+        setAttemptResult(null);
+        setShuffleTick(0);
+    }, [question?.id]);
+
+    const handleSelect = (side, item) => {
+        if (matchedIds.has(item.id)) return; // already matched
+        if (side === 'left') {
+            setSelectedLeft(item.id === selectedLeft ? null : item.id);
+            setAttemptResult(null);
+        } else {
+            setSelectedRight(item.id === selectedRight ? null : item.id);
+            setAttemptResult(null);
+        }
+    };
+
+    useEffect(() => {
+        if (selectedLeft && selectedRight) {
+            const left = baseLeft.find(i => i.id === selectedLeft);
+            const right = baseRight.find(i => i.id === selectedRight);
+            if (left && right) {
+                if (left.pairIndex === right.pairIndex) {
+                    setMatchedIds(prev => new Set([...prev, left.id, right.id]));
+                    setAttemptResult('ok');
+                } else {
+                    setAttemptResult('bad');
+                    // Deduct a heart on mismatch (once per mismatch)
+                    try { onMismatch && onMismatch(); } catch(_) {}
+                }
+            }
+            const success = left && right && left.pairIndex === right.pairIndex;
+            const to = setTimeout(() => {
+                setSelectedLeft(null);
+                setSelectedRight(null);
+                if (!success) setAttemptResult(null);
+            }, success ? 250 : 650);
+            return () => clearTimeout(to);
+        }
+    }, [selectedLeft, selectedRight, baseLeft, baseRight]);
+
+    const renderCard = (item, side) => {
+        const isSelected = (side === 'left' ? selectedLeft : selectedRight) === item.id;
+        const isMatched = matchedIds.has(item.id);
+        const base = 'rounded-xl border-2 border-b-4 px-3 py-3 text-center cursor-pointer transition select-none text-sm sm:text-base flex flex-col items-center gap-2';
+    let cls = base + ' bg-white border-gray-200 hover:bg-gray-100';
+    const isError = attemptResult === 'bad' && (item.id === selectedLeft || item.id === selectedRight);
+    if (isMatched) cls = base + ' bg-green-100 border-green-300 text-green-700';
+    else if (isError) cls = base + ' bg-red-100 border-red-300 text-red-600';
+    else if (isSelected) cls = base + ' bg-blue-100 border-blue-300 text-blue-600';
+        return (
+            <motion.div
+                layout
+                key={item.id}
+        className={cls + (isMatched ? ' animate-pulse' : '')}
+                onClick={() => handleSelect(side, item)}
+                role="button"
+                aria-pressed={isSelected}
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                whileTap={{ scale: 0.95 }}
+            >
+                {item.image && (
+                    <img
+                        src={item.image}
+                        alt={item.value || 'pair image'}
+                        className="max-h-16 w-auto object-contain"
+                        loading="lazy"
+                        onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                        }}
+                    />
+                )}
+                {item.value && (
+                    <span className="whitespace-pre-wrap text-center leading-snug">
+                        {item.value}
+                    </span>
+                )}
+                {!item.value && !item.image && <span className="text-gray-400">(empty)</span>}
+            </motion.div>
+        );
+    };
+
+    return (
+        <section className="flex max-w-2xl grow flex-col gap-5 self-center sm:items-center sm:justify-center sm:gap-12 sm:px-4">
+            <div className="flex w-full items-center justify-between gap-4">
+                <h1 className="flex-1 text-center text-2xl font-bold sm:text-3xl">
+                    {question?.question || 'Find the matching pairs'}
+                </h1>
+            </div>
+            <div className="flex w-full flex-col gap-4 sm:flex-row sm:items-start sm:justify-center relative">
+                {!onAllMatched && null}
+                <div className="flex w-full flex-col gap-2">
+                    {shuffledLeft.map(item => renderCard(item, 'left'))}
+                </div>
+                <div className="flex w-full flex-col gap-2">
+                    {shuffledRight.map(item => renderCard(item, 'right'))}
+                </div>
+                <div className="absolute -top-8 left-0 text-xs font-semibold text-gray-500 sm:static sm:order-first sm:w-full sm:text-center">
+                    Залишилось пар: {Math.max(0, pairs.length - matchedIds.size / 2)} / {pairs.length}
+                </div>
+            </div>
+            <div className="flex w-full justify-center gap-4">
+                <button
+                    type="button"
+                    className="rounded-full bg-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-300 disabled:opacity-40"
+                    disabled={pairs.length === 0 || (matchedIds.size >= pairs.length * 2)}
+                    onClick={() => setShuffleTick(t => t + 1)}
+                >
+                    Перетасувати
+                </button>
+                <div className="text-xs text-gray-500 flex items-center">
+                    {pairs.length > 0 ? `${matchedIds.size / 2}/${pairs.length} співпало` : 'Немає пар'}
+                </div>
+            </div>
+        </section>
+    );
+};
+
 // Lightweight confetti (no extra deps); shared style injected once
 const ensureConfettiStyles = () => {
     if (document.getElementById("confetti-keyframes")) return;
@@ -333,10 +495,10 @@ const useCountUp = (to = 0, durationMs = 800) => {
     return val;
 };
 
-const LessonComplete = ({ correct, total, onExit, displayXp }) => {
+const LessonComplete = ({ correct, total, onExit, displayXp, accuracyPercent }) => {
     const [fired, setFired] = useState(false);
     const xp = useCountUp(Math.max(0, Number(displayXp) || 0), 900);
-    const acc = useCountUp(Math.round((correct / Math.max(total, 1)) * 100), 900);
+    const acc = useCountUp(Math.max(0, Math.min(100, accuracyPercent ?? Math.round((correct / Math.max(total, 1)) * 100))), 900);
 
     useEffect(() => {
         if (!fired) {
@@ -428,6 +590,7 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
     const [completed, setCompleted] = useState(false);
     const [awardedXp, setAwardedXp] = useState(null);
     const [questionAwards, setQuestionAwards] = useState([]); // { xp, practice }
+    const [mismatchCount, setMismatchCount] = useState(0); // incorrect pair attempts costing heart
 
     useEffect(() => {
         let mounted = true;
@@ -508,19 +671,21 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
         }
     }, [completed, lessonId, correctCount, questions.length]);
 
-    if (loading) return <div>Loading lesson...</div>;
-    if (error) return <div className="text-red-500">{error}</div>;
-    if (!questions.length)
-        return <div>No questions available for this lesson.</div>;
-
+    // Derive current question (may be undefined until loaded)
     const q = questions[index];
     const totalNeeded = questions.length; // keep 1 question == 1 step
 
-    const mcMode = (q.options || []).filter((o) => o.is_correct).length === 1;
+    const mcMode = q && (q.options || []).filter((o) => o.is_correct).length === 1 && q.type !== 'match';
+    const matchMode = !!q && (q.type === 'match' || (q.meta && Array.isArray(q.meta.pairs)));
+    const matchPairs = matchMode ? (Array.isArray(q.meta?.pairs) ? q.meta.pairs : []) : [];
+    const [matchAllDone, setMatchAllDone] = useState(false); // after pairs matched
 
     const checkAnswer = async () => {
         let correct = false;
-        if (mcMode) {
+        if (matchMode) {
+            // all pairs matched if check button active
+            correct = matchAllDone && matchPairs.length > 0;
+        } else if (mcMode) {
             correct = q.options?.[selected]?.is_correct === true;
         } else {
             const correctIndices = q.options
@@ -577,22 +742,43 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
     if (completed) {
         const questionTotal = questionAwards.reduce((s, qa) => s + (qa?.xp || 0), 0);
         const displayXp = questionTotal + (awardedXp ?? 0);
+        const totalAttempts = correctCount + incorrectCount + mismatchCount;
+        const accuracyPercent = totalAttempts > 0 ? Math.round((correctCount / totalAttempts) * 100) : 0;
         return (
             <LessonComplete
                 correct={correctCount}
                 total={questions.length}
                 displayXp={displayXp}
                 onExit={onExit}
+                accuracyPercent={accuracyPercent}
             />
         );
     }
 
-    const correctAnswerText = mcMode
-        ? q.options?.find((o) => o.is_correct)?.text || ""
-        : (q.options || [])
-              .filter((o) => o.is_correct)
-              .map((o) => o.text)
-              .join(" ");
+    let correctAnswerText = '';
+    if (q) {
+        if (matchMode) {
+            correctAnswerText = matchPairs.map(p => `${p.left} – ${p.right}`).join(', ');
+        } else if (mcMode) {
+            correctAnswerText = q.options?.find((o) => o.is_correct)?.text || '';
+        } else {
+            correctAnswerText = (q.options || [])
+                .filter((o) => o.is_correct)
+                .map((o) => o.text)
+                .join(' ');
+        }
+    }
+
+    const isAnswerSelected = matchMode
+        ? matchAllDone && matchPairs.length > 0
+        : mcMode
+        ? selected !== null
+        : selectedIndices.length > 0;
+
+    // Fallback content handling moved here to preserve hook order
+    if (loading) return <div>Loading lesson...</div>;
+    if (error) return <div className="text-red-500">{error}</div>;
+    if (!questions.length) return <div>No questions available for this lesson.</div>;
 
     return (
         <div className="flex min-h-screen flex-col gap-5">
@@ -690,7 +876,35 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
                 </div>
             )}
 
-            {!noHearts && mcMode ? (
+            {!noHearts && matchMode ? (
+                <MatchPairs
+                    question={q}
+                    onAllMatched={() => setMatchAllDone(true)}
+                    onMismatch={() => {
+                        // Deduct heart (client + server) for incorrect pair attempt
+                        (async () => {
+                            try {
+                                const r = await ProgressService.reduceHearts(q.id);
+                                const newHearts = r?.data?.hearts ?? r?.hearts;
+                                if (typeof newHearts === 'number') {
+                                    setHearts(newHearts);
+                                    if (newHearts <= 0) setNoHearts(true);
+                                } else {
+                                    setHearts(h => typeof h === 'number' ? Math.max(h - 1, 0) : h);
+                                    setNoHearts(h => true);
+                                }
+                            } catch (_) {
+                                setHearts(h => {
+                                    const next = typeof h === 'number' ? Math.max(h - 1, 0) : 0;
+                                    if (next <= 0) setNoHearts(true);
+                                    return next;
+                                });
+                            }
+                                setMismatchCount(c => c + 1);
+                        })();
+                    }}
+                />
+            ) : !noHearts && mcMode ? (
                 <MultipleChoice
                     question={q}
                     selected={selected}
@@ -709,9 +923,7 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
             )}
 
             <CheckPanel
-                isAnswerSelected={
-                    mcMode ? selected !== null : selectedIndices.length > 0
-                }
+                isAnswerSelected={isAnswerSelected}
                 isAnswerCorrect={isCorrect}
                 correctAnswerShown={correctShown}
                 correctAnswer={correctAnswerText}
@@ -721,6 +933,7 @@ const DuoLesson = ({ courseId, unitId, lessonId, onExit }) => {
                     setIsCorrect(false);
                     setCorrectShown(true);
                 }}
+                award={questionAwards[index]}
             />
         </div>
     );

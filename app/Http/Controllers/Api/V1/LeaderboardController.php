@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Api\V1\BaseApiController;
 use App\Models\LeagueTier;
 use App\Models\UserLeagueHistory;
+use App\Models\XpEvent;
 use App\Services\LeagueService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ class LeaderboardController extends BaseApiController
 {
     /**
      * GET /api/v1/leaderboard?scope=week|all&limit=50
-     * - week: uses completed challenges this week (10 XP each) as weekly XP
+     * - week: uses xp_events ledger this week if available; fallback to completed challenges * 10
      * - all: uses total points from user_progress
      */
     public function index(Request $request)
@@ -37,29 +38,51 @@ class LeaderboardController extends BaseApiController
         $start = Carbon::now()->startOfWeek();
         $now = Carbon::now();
 
-        $base = DB::table('challenge_progress as cp')
-            ->selectRaw('cp.user_id, COUNT(*) * 10 as xp')
-            ->where('cp.completed', true)
-            ->whereBetween('cp.updated_at', [$start, $now])
-            ->groupBy('cp.user_id');
+        if (Schema::hasTable('xp_events')) {
+            // Accurate ledger-based aggregation
+            $base = XpEvent::query()
+                ->selectRaw('user_id, SUM(amount) as xp')
+                ->whereBetween('created_at', [$start, $now])
+                ->groupBy('user_id');
 
-        $top = DB::query()->fromSub($base, 't')
-            ->join('users as u', 'u.id', '=', 't.user_id')
-            ->leftJoin('user_progress as up', 'up.user_id', '=', 'u.id')
-            ->orderByDesc('t.xp')
-            ->limit($limit)
-            ->get(['t.user_id', 't.xp', 'u.name', 'u.email', 'up.points']);
+            $top = DB::query()->fromSub($base, 't')
+                ->join('users as u', 'u.id', '=', 't.user_id')
+                ->leftJoin('user_progress as up', 'up.user_id', '=', 'u.id')
+                ->orderByDesc('t.xp')
+                ->limit($limit)
+                ->get(['t.user_id', 't.xp', 'u.name', 'u.email', 'up.points']);
 
-        // Your weekly xp (may be null => 0)
-        $yourXpRow = DB::query()->fromSub($base, 't')->where('t.user_id', $userId)->first();
-        $yourXp = (int) ($yourXpRow->xp ?? 0);
-        $yourRank = 0;
-        if ($yourXp > 0) {
-            $higher = DB::query()->fromSub($base, 't')->where('t.xp', '>', $yourXp)->count();
-            $yourRank = $higher + 1;
+            $yourXpRow = DB::query()->fromSub($base, 't')->where('t.user_id', $userId)->first();
+            $yourXp = (int) ($yourXpRow->xp ?? 0);
+            $yourRank = 0;
+            if ($yourXp > 0) {
+                $higher = DB::query()->fromSub($base, 't')->where('t.xp', '>', $yourXp)->count();
+                $yourRank = $higher + 1;
+            }
+        } else {
+            // Legacy fallback (challenge_progress count * 10)
+            $base = DB::table('challenge_progress as cp')
+                ->selectRaw('cp.user_id, COUNT(*) * 10 as xp')
+                ->where('cp.completed', true)
+                ->whereBetween('cp.updated_at', [$start, $now])
+                ->groupBy('cp.user_id');
+
+            $top = DB::query()->fromSub($base, 't')
+                ->join('users as u', 'u.id', '=', 't.user_id')
+                ->leftJoin('user_progress as up', 'up.user_id', '=', 'u.id')
+                ->orderByDesc('t.xp')
+                ->limit($limit)
+                ->get(['t.user_id', 't.xp', 'u.name', 'u.email', 'up.points']);
+
+            $yourXpRow = DB::query()->fromSub($base, 't')->where('t.user_id', $userId)->first();
+            $yourXp = (int) ($yourXpRow->xp ?? 0);
+            $yourRank = 0;
+            if ($yourXp > 0) {
+                $higher = DB::query()->fromSub($base, 't')->where('t.xp', '>', $yourXp)->count();
+                $yourRank = $higher + 1;
+            }
         }
 
-        // Attach position and is_you
         $result = [];
         $pos = 1;
         foreach ($top as $row) {
@@ -201,11 +224,17 @@ class LeaderboardController extends BaseApiController
         // This week's XP (live)
         $start = Carbon::now()->startOfWeek();
         $end = Carbon::now()->endOfWeek();
-        $thisWeekXp = (int) DB::table('challenge_progress')
-            ->where('user_id', $userId)
-            ->where('completed', true)
-            ->whereBetween('updated_at', [$start, $end])
-            ->count() * 10;
+        if (Schema::hasTable('xp_events')) {
+            $thisWeekXp = (int) XpEvent::where('user_id', $userId)
+                ->whereBetween('created_at', [$start, $end])
+                ->sum('amount');
+        } else {
+            $thisWeekXp = (int) DB::table('challenge_progress')
+                ->where('user_id', $userId)
+                ->where('completed', true)
+                ->whereBetween('updated_at', [$start, $end])
+                ->count() * 10;
+        }
 
         // History (last 12, newest first)
         $hist = UserLeagueHistory::where('user_id', $userId)
