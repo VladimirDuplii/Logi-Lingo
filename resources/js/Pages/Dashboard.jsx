@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { Head, Link } from "@inertiajs/react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import DuoLayout from "@/Layouts/DuoLayout";
@@ -7,7 +7,7 @@ import { setAuthToken } from "@/Services/ApiService";
 import { Card } from '@/Components/UI/card';
 import { Button } from '@/Components/UI/button';
 import { Headline } from '@/Components/UI/Headline';
-import { ProgressBar } from '@/Components/ui';
+import { ProgressBar, Skeleton, CourseCardSkeleton } from '@/Components/ui';
 import { CourseService, ProgressService } from "@/Services";
 import { Courses, Progress } from "@/Components";
 import { useToast } from "@/Components/Toast";
@@ -38,141 +38,50 @@ export default function Dashboard({ auth }) {
             setLoading(false);
             return;
         }
-
-        const fetchDashboardData = async () => {
+        let cancelled = false;
+        const mark = (name) => { if (typeof performance !== 'undefined') performance.mark(name); };
+        const measure = (name, start, end) => { if (typeof performance !== 'undefined') { try { performance.measure(name, start, end); } catch(_){} } };
+        (async () => {
+            mark('dash-start');
             try {
-                // Ensure no stale Bearer token from a previous user is used
-                try {
-                    setAuthToken(null);
-                } catch (_) {
-                    /* noop */
-                }
-                // 1) Fetch user progress (hearts/points/active course)
-                const up = await ProgressService.getUserProgress();
+                try { setAuthToken(null); } catch(_){}
+                // Fetch user progress first (needed for hearts + active course id)
+                const upPromise = ProgressService.getUserProgress();
+                const up = await upPromise; // Only await progress now
                 const upData = up?.data || up?.userProgress || null;
+                if (cancelled) return;
                 setUserProgress(upData);
+                const activeCourseId = upData?.active_course_id || upData?.activeCourse?.id;
 
-                // If active course exists, compute aggregation for lessons
-                const activeCourseId =
-                    upData?.active_course_id || upData?.activeCourse?.id;
+                // Kick off secondary requests in parallel
+                const requests = [];
                 if (activeCourseId) {
-                    try {
-                        const cp = await ProgressService.getCourseProgress(
-                            activeCourseId
-                        );
-                        const units = cp?.data || [];
-                        const totals = units.reduce(
-                            (acc, unit) => {
-                                const lessons = Array.isArray(unit?.lessons)
-                                    ? unit.lessons
-                                    : [];
-                                acc.total += lessons.length;
-                                acc.completed += lessons.filter(
-                                    (l) => !!l?.completed
-                                ).length;
-                                return acc;
-                            },
-                            { total: 0, completed: 0 }
-                        );
-                        const percent =
-                            totals.total > 0
-                                ? Math.round(
-                                      (totals.completed / totals.total) * 100
-                                  )
-                                : 0;
-                        setActiveAgg({
-                            totalLessons: totals.total,
-                            completedLessons: totals.completed,
-                            percent,
-                        });
-
-                        // compute unit chips
-                        const unitChips = units.map((u) => {
-                            const ls = Array.isArray(u?.lessons)
-                                ? u.lessons
-                                : [];
-                            const total = ls.length;
-                            const completed = ls.filter(
-                                (l) => !!l?.completed
-                            ).length;
-                            const pct =
-                                total > 0
-                                    ? Math.round((completed / total) * 100)
-                                    : 0;
-                            return {
-                                id: u.id,
-                                title:
-                                    u.title || `Розділ ${u.order ?? ""}`.trim(),
-                                completed,
-                                total,
-                                percent: pct,
-                            };
-                        });
-                        setActiveUnits(unitChips);
-                    } catch (_) {
-                        setActiveAgg({
-                            totalLessons: 0,
-                            completedLessons: 0,
-                            percent: 0,
-                        });
-                        setActiveUnits([]);
-                    }
+                    requests.push(
+                        ProgressService.getCourseProgress(activeCourseId)
+                            .then(cp => { if (cancelled) return; const units = cp?.data || []; const totals = units.reduce((acc,u)=>{ const lessons=Array.isArray(u?.lessons)?u.lessons:[]; acc.total+=lessons.length; acc.completed+=lessons.filter(l=>!!l?.completed).length; return acc;}, {total:0,completed:0}); const percent = totals.total?Math.round((totals.completed/totals.total)*100):0; setActiveAgg({ totalLessons: totals.total, completedLessons: totals.completed, percent }); const unitChips = units.map(u=>{ const ls = Array.isArray(u?.lessons)?u.lessons:[]; const total=ls.length; const completed=ls.filter(l=>!!l?.completed).length; const pct = total?Math.round((completed/total)*100):0; return { id:u.id, title:u.title || `Розділ ${u.order ?? ''}`.trim(), completed, total, percent:pct }; }); setActiveUnits(unitChips); })
+                            .catch(()=>{ if(cancelled) return; setActiveAgg({ totalLessons:0, completedLessons:0, percent:0}); setActiveUnits([]); })
+                    );
                 } else {
-                    setActiveAgg({
-                        totalLessons: 0,
-                        completedLessons: 0,
-                        percent: 0,
-                    });
+                    setActiveAgg({ totalLessons:0, completedLessons:0, percent:0});
                     setActiveUnits([]);
                 }
-
-                // 2) Recent courses
-                const coursesResponse = await CourseService.getCourses();
-                if (coursesResponse?.data?.courses) {
-                    setRecentCourses(coursesResponse.data.courses.slice(0, 3));
-                }
-
-                // 3) In-progress courses (MVP uses active course aggregation)
-                const progressResponse =
-                    await ProgressService.getAllCoursesProgress();
-                if (progressResponse?.data?.data) {
-                    const coursesInProgress = progressResponse.data.data
-                        .filter(
-                            (course) =>
-                                (course.completion_percentage || 0) > 0 &&
-                                (course.completion_percentage || 0) < 100
-                        )
-                        .sort(
-                            (a, b) =>
-                                (b.last_activity_date || 0) -
-                                (a.last_activity_date || 0)
-                        );
-                    setInProgressCourses(coursesInProgress);
-                }
-            } catch (err) {
-                setError(
-                    "Failed to load dashboard data. Please try again later."
+                // Recent courses & progress list in parallel
+                requests.push(
+                    CourseService.getCourses().then(cr=>{ if(cancelled) return; if(cr?.data?.courses) setRecentCourses(cr.data.courses.slice(0,3)); })
                 );
-                setDebugInfo({
-                    message: err?.message,
-                    stack: err?.stack,
-                    response: err?.response
-                        ? {
-                              status: err.response.status,
-                              statusText: err.response.statusText,
-                              data: err.response.data,
-                          }
-                        : "No response data",
-                    request: err?.request
-                        ? "Request was made but no response received"
-                        : "No request made",
-                });
+                requests.push(
+                    ProgressService.getAllCoursesProgress().then(pr=>{ if(cancelled) return; if(pr?.data?.data){ const coursesInProgress = pr.data.data.filter(c=>(c.completion_percentage||0)>0 && (c.completion_percentage||0)<100).sort((a,b)=>(b.last_activity_date||0)-(a.last_activity_date||0)); setInProgressCourses(coursesInProgress); } })
+                );
+                await Promise.allSettled(requests);
+            } catch (err) {
+                if (cancelled) return;
+                setError("Failed to load dashboard data. Please try again later.");
+                setDebugInfo({ message: err?.message, stack: err?.stack, response: err?.response?{ status:err.response.status, statusText:err.response.statusText, data:err.response.data }:'No response data', request: err?.request? 'Request was made but no response received':'No request made' });
             } finally {
-                setLoading(false);
+                if (!cancelled) { setLoading(false); mark('dash-end'); measure('dashboard-total','dash-start','dash-end'); }
             }
-        };
-
-        fetchDashboardData();
+        })();
+        return ()=>{ cancelled = true; };
     }, [authenticated]);
 
     const handleCourseSelect = (course) => {
@@ -252,10 +161,29 @@ export default function Dashboard({ auth }) {
             <div className="py-8 lg:py-10">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     {loading ? (
-                        <div className="text-center py-8">
-                            <p className="text-gray-600">
-                                Loading dashboard data...
-                            </p>
+                        <div className="space-y-8" aria-busy="true" aria-label="Завантаження дашборду">
+                            <Card className="p-6 md:p-8">
+                                <div className="flex items-center gap-5">
+                                    <Skeleton className="h-14 w-14 rounded-2xl" />
+                                    <div className="flex-1 min-w-0">
+                                        <Skeleton className="h-5 w-48 mb-2" />
+                                        <Skeleton className="h-3 w-64" />
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <Skeleton className="h-7 w-20 rounded-full" />
+                                        <Skeleton className="h-7 w-28 rounded-full" />
+                                    </div>
+                                </div>
+                            </Card>
+                            <Card className="p-6 md:p-8">
+                                <Skeleton className="h-4 w-24 mb-4" />
+                                <Skeleton className="h-5 w-80 mb-4" />
+                                <Skeleton className="h-2 w-full mb-2" />
+                                <Skeleton className="h-2 w-2/3" />
+                            </Card>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {[...Array(3)].map((_,i)=>(<CourseCardSkeleton key={i} />))}
+                            </div>
                         </div>
                     ) : error ? (
                         <div
@@ -372,9 +300,7 @@ export default function Dashboard({ auth }) {
                                         </div>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                             {recentCourses.map(course => (
-                                                <button key={course.id} onClick={() => handleCourseSelect(course)} className="text-left group rounded-2xl bg-white border border-border-subtle hover:border-brand-300 shadow-sm hover:shadow-card transition overflow-hidden">
-                                                    <Courses.CourseCard course={course} />
-                                                </button>
+                                                <Courses.CourseCard key={course.id} course={course} onClick={() => handleCourseSelect(course)} />
                                             ))}
                                         </div>
                                     </div>
