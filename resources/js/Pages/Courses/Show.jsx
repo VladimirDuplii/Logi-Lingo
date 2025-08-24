@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Head } from "@inertiajs/react";
 // AuthenticatedLayout not used; DuoLayout handles the shell
 import DuoLayout from "@/Layouts/DuoLayout";
@@ -10,6 +10,63 @@ const CourseDetailsPage = ({ auth, course }) => {
     const [selectedUnit, setSelectedUnit] = useState(null);
     const [selectedLesson, setSelectedLesson] = useState(null);
     const [useDuoView, setUseDuoView] = useState(true);
+    const [showPath, setShowPath] = useState(false); // MagicPatterns LearningPath toggle
+
+    // Derive data structure for LearningPath component
+    const learningPathUnits = useMemo(() => {
+        if (!course?.units) return [];
+        return course.units.map((u, idx) => {
+            const lessons = (u.lessons || []).map((l) => {
+                const name = l.title || l.name || `Lesson ${l.id}`;
+                const completed = !!(
+                    l.completed ||
+                    l.is_completed ||
+                    l.passed ||
+                    l.completed_at ||
+                    l.status === "completed"
+                );
+                return {
+                    name,
+                    completed,
+                    stars: l.stars || 0,
+                    character: l.icon || l.emoji || (completed ? "📗" : "📘"),
+                };
+            });
+            const anyCompleted = lessons.some((l) => l.completed);
+            const unlocked =
+                u.unlocked !== undefined
+                    ? !!u.unlocked
+                    : idx === 0 || anyCompleted;
+            // Heuristic: current unit = first unlocked that isn't fully completed
+            const unitCompleted = lessons.length > 0 && lessons.every((l) => l.completed);
+            const current =
+                unlocked && !unitCompleted &&
+                // ensure only one current (first matching)
+                !course.units.slice(0, idx).some((prev, pIdx) => {
+                    const prevLessons = (prev.lessons || []).map((pl) => !!(
+                        pl.completed ||
+                        pl.is_completed ||
+                        pl.passed ||
+                        pl.completed_at ||
+                        pl.status === "completed"
+                    ));
+                    const prevUnitCompleted =
+                        prevLessons.length > 0 && prevLessons.every(Boolean);
+                    const prevUnlocked = prev.unlocked !== undefined ? !!prev.unlocked : pIdx === 0 || prevLessons.some(Boolean);
+                    return prevUnlocked && !prevUnitCompleted;
+                });
+            // Simple rotating themes
+            const themes = ["purple", "blue", "teal"];
+            return {
+                title: u.title || u.name || `Unit ${idx + 1}`,
+                theme: themes[idx % themes.length],
+                icon: u.icon || u.emoji || "📦",
+                lessons,
+                unlocked,
+                current,
+            };
+        });
+    }, [course]);
 
     // If user came with ?start=1, auto-select first unit/lesson when available
     useEffect(() => {
@@ -56,7 +113,7 @@ const CourseDetailsPage = ({ auth, course }) => {
     }, [selectedLesson]);
 
     const renderContent = () => {
-        if (selectedLesson) {
+    if (selectedLesson) {
             return (
                 <div
                     id="lesson-overlay"
@@ -85,6 +142,14 @@ const CourseDetailsPage = ({ auth, course }) => {
                             }}
                         />
                     </div>
+                </div>
+            );
+        }
+
+        if (showPath) {
+            return (
+                <div className="w-full">
+                    <Courses.LearningPath units={learningPathUnits} />
                 </div>
             );
         }
@@ -200,20 +265,40 @@ const CourseDetailsPage = ({ auth, course }) => {
                             <h2 className="font-semibold text-xl text-gray-800 leading-tight">
                                 {course.title}
                             </h2>
-                            <div className="flex items-center gap-2">
-                                <span className="text-sm text-gray-500">
-                                    Tree view
-                                </span>
-                                <button
-                                    className={`rounded-2xl border-2 border-b-4 px-3 py-1 text-sm font-bold ${
-                                        useDuoView
-                                            ? "border-green-600 bg-green-500 text-white"
-                                            : "border-gray-300 bg-white text-gray-500"
-                                    }`}
-                                    onClick={() => setUseDuoView((x) => !x)}
-                                >
-                                    {useDuoView ? "ON" : "OFF"}
-                                </button>
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-500">
+                                        Path
+                                    </span>
+                                    <button
+                                        className={`rounded-2xl border-2 border-b-4 px-3 py-1 text-sm font-bold transition ${
+                                            showPath
+                                                ? "border-indigo-600 bg-indigo-500 text-white"
+                                                : "border-gray-300 bg-white text-gray-500"
+                                        }`}
+                                        onClick={() => setShowPath((v) => !v)}
+                                    >
+                                        {showPath ? "ON" : "OFF"}
+                                    </button>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-500">
+                                        Tree
+                                    </span>
+                                    <button
+                                        className={`rounded-2xl border-2 border-b-4 px-3 py-1 text-sm font-bold transition ${
+                                            useDuoView && !showPath
+                                                ? "border-green-600 bg-green-500 text-white"
+                                                : "border-gray-300 bg-white text-gray-500"
+                                        }`}
+                                        onClick={() =>
+                                            setUseDuoView((x) => !x)
+                                        }
+                                        disabled={showPath}
+                                    >
+                                        {useDuoView && !showPath ? "ON" : "OFF"}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         {renderContent()}
