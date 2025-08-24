@@ -1,4 +1,5 @@
 import CourseList from './CourseList';
+export { default as LearningPath } from './LearningPath';
 import CourseCard from './CourseCard';
 import CourseDetail from './CourseDetail';
 import UnitList from './UnitList';
