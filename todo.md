@@ -1,4 +1,28 @@
-# План розробки Logi-Lingo
+# TODO (Design & Performance Roadmap)
+
+## Phase 1 (Do now)
+- [ ] Aggregate endpoint `/api/dashboard` (userProgress, activeCourseUnits, recentCourses, coursesProgress)
+- [ ] Add sessionStorage cache layer for courses & progress (TTL 10m) with revalidation
+- [ ] Add AbortController to dashboard data fetch logic
+- [ ] Move progress aggregation (lesson counts & percent) to backend SQL and return ready numbers
+- [ ] Expose ETag / Last-Modified headers for `/courses` & `/progress` endpoints
+- [ ] Telemetry: send `dashboard-total` perf measure to backend `/metrics/perf`
+
+## Phase 2 (After design stabilizes)
+- [ ] Code splitting (React.lazy) for heavy sections (Progress list, Recent courses)
+- [ ] IntersectionObserver lazy mount of non-visible sections
+- [ ] Delayed skeleton (120ms rule) to avoid flash on very fast loads
+- [ ] WebSocket / Echo live progress updates (optional)
+- [ ] Prefetch `/courses` on idle or hover of main CTA
+
+## Phase 3 (Enhancements)
+- [ ] Progressive SSR / streaming (if Inertia SSR enabled)
+- [ ] Offline-first caching strategy (Cache Storage + stale-while-revalidate)
+- [ ] Metrics dashboard (P50/P95 for dashboard load)
+- [ ] Dark mode token audit + prefers-color-scheme support
+
+---
+Created: 2025-08-24# План розробки Logi-Lingo
 
 ## Задачі, які потрібно виконати
 
