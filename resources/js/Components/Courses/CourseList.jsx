@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CourseService } from '../../Services';
 import CourseCard from './CourseCard';
+import { Headline } from '@/Components/ui';
 
 const CourseList = ({ onCourseSelect }) => {
     const [courses, setCourses] = useState([]);
@@ -56,9 +57,9 @@ const CourseList = ({ onCourseSelect }) => {
 
     return (
         <div className="course-list">
-            <div className="mb-6 flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-gray-800">Курси</h2>
-            </div>
+                        <div className="mb-6">
+                            <Headline level={2} kicker="Навчання">Курси</Headline>
+                        </div>
             <div className="grid grid-cols-1 gap-5">
         {courses.map(course => (
                     <CourseCard
