@@ -244,8 +244,8 @@ export default function Dashboard({ auth }) {
         <DuoLayout>
             <Head title="Dashboard" />
 
-            <div className="py-12">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div className="py-8 lg:py-10">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     {loading ? (
                         <div className="text-center py-8">
                             <p className="text-gray-600">
@@ -274,262 +274,128 @@ export default function Dashboard({ auth }) {
                     ) : (
                         <>
                             {/* Duo-style header: avatar, hearts, points */}
-                            <div
-                                id="dash-header"
-                                className={`overflow-hidden sm:rounded-2xl bg-white shadow-sm ring-1 ring-gray-100 mb-6 transition-all duration-500 ${
-                                    mounted
-                                        ? "opacity-100 translate-y-0"
-                                        : "opacity-0 translate-y-2"
-                                }`}
-                            >
-                                <div className="p-6">
-                                    <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-4">
-                                            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-green-400 to-green-500 text-white text-lg font-bold shadow-inner">
-                                                {auth?.user?.name?.charAt(0) ||
-                                                    "U"}
-                                            </div>
-                                            <div>
-                                                <div className="text-lg font-semibold text-gray-800">
-                                                    Привіт, {auth.user.name}
-                                                </div>
-                                                <div className="text-sm text-gray-500">
-                                                    Повернімося до навчання
-                                                </div>
-                                            </div>
+                            <section id="dash-header" className={`ui-card mb-8 overflow-hidden transition-all duration-500 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}>
+                                <div className="p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                                    <div className="flex items-center gap-5">
+                                        <div className="h-14 w-14 rounded-2xl bg-brand-gradient text-white text-xl font-bold flex items-center justify-center shadow-soft-lg">
+                                            {auth?.user?.name?.charAt(0) || "U"}
                                         </div>
-                                        <div className="flex items-center gap-4">
-                                            {/* Points */}
-                                            <div className="inline-flex items-center gap-2 rounded-full bg-orange-50 px-3 py-1 text-orange-700 ring-1 ring-orange-200">
-                                                <span className="text-sm font-semibold">
-                                                    ⚡
-                                                </span>
-                                                <span className="text-sm font-semibold">
-                                                    {points}
-                                                </span>
-                                            </div>
-                                            {/* Hearts */}
-                                            <div className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1 text-rose-700 ring-1 ring-rose-200">
-                                                {Array.from({ length: 5 }).map(
-                                                    (_, i) => (
-                                                        <span
-                                                            key={i}
-                                                            className={`text-sm ${
-                                                                i < hearts
-                                                                    ? "opacity-100"
-                                                                    : "opacity-30"
-                                                            }`}
-                                                        >
-                                                            ❤
-                                                        </span>
-                                                    )
-                                                )}
-                                            </div>
-                                            {canRefill && (
-                                                <button
-                                                    onClick={handleRefill}
-                                                    disabled={refilling}
-                                                    className={`rounded-full px-3 py-1 text-sm font-semibold text-white shadow focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 ${
-                                                        refilling
-                                                            ? "bg-rose-300 cursor-not-allowed"
-                                                            : "bg-rose-500 hover:bg-rose-600"
-                                                    }`}
-                                                >
-                                                    {refilling
-                                                        ? "Виконується…"
-                                                        : "Відновити життя (-50 ⚡)"}
-                                                </button>
-                                            )}
+                                        <div>
+                                            <h1 className="text-gradient-brand text-2xl font-bold tracking-tight">
+                                                Привіт, {auth.user.name}
+                                            </h1>
+                                            <p className="text-sm text-gray-500 mt-1">Повернімося до навчання</p>
                                         </div>
                                     </div>
+                                    <div className="flex items-center gap-4 flex-wrap">
+                                        <div className="badge-pill brand">
+                                            <span className="text-sm">⚡</span>
+                                            <span className="text-sm font-semibold">{points}</span>
+                                        </div>
+                                        <div className="badge-pill accent">
+                                            {Array.from({ length: 5 }).map((_, i) => (
+                                                <span key={i} className={`text-sm ${i < hearts ? "opacity-100" : "opacity-30"}`}>❤</span>
+                                            ))}
+                                        </div>
+                                        {canRefill && (
+                                            <button
+                                                onClick={handleRefill}
+                                                disabled={refilling}
+                                                className={`inline-flex items-center gap-2 rounded-full bg-emerald-500 hover:bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${refilling ? "opacity-70 cursor-not-allowed" : ""}`}
+                                            >
+                                                {refilling ? "Виконується…" : "Відновити життя -50 ⚡"}
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
-                            </div>
+                            </section>
 
                             {/* Continue card */}
-                            <div
-                                id="dash-continue"
-                                className={`overflow-hidden sm:rounded-2xl bg-white shadow-sm ring-1 ring-gray-100 mb-6 transition-all duration-500 delay-100 ${
-                                    mounted
-                                        ? "opacity-100 translate-y-0"
-                                        : "opacity-0 translate-y-2"
-                                }`}
-                            >
-                                <div className="p-6 flex items-center justify-between">
-                                    <div className="min-w-0">
-                                        <div className="text-sm text-gray-500 mb-1">
-                                            Активний курс
-                                        </div>
-                                        <div className="text-lg font-semibold text-gray-800 truncate">
-                                            {activeCourseTitle}
-                                        </div>
-                                        <div className="mt-3">
-                                            <div className="flex items-center justify-between text-sm text-gray-600 mb-1">
+                            <section id="dash-continue" className={`ui-card mb-8 transition-all duration-500 delay-75 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}>
+                                <div className="p-6 md:p-8 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-medium tracking-wide text-brand-600 mb-2 uppercase">Активний курс</p>
+                                        <h2 className="text-xl font-semibold text-gray-800 truncate">{activeCourseTitle}</h2>
+                                        <div className="mt-4 w-full max-w-md">
+                                            <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
                                                 <span>Прогрес</span>
-                                                <span>
-                                                    {activeAgg?.percent ?? 0}%
-                                                </span>
+                                                <span>{activeAgg?.percent ?? 0}%</span>
                                             </div>
-                                            <div className="relative h-2 w-64 max-w-full overflow-hidden rounded-full bg-gray-200">
-                                                <div
-                                                    className="h-full bg-green-500 transition-all duration-500"
-                                                    style={{
-                                                        width: `${Math.min(
-                                                            100,
-                                                            Math.max(
-                                                                0,
-                                                                activeAgg?.percent ??
-                                                                    0
-                                                            )
-                                                        )}%`,
-                                                    }}
-                                                />
+                                            <div className="progress-track">
+                                                <div className="progress-fill" style={{ width: `${Math.min(100, Math.max(0, activeAgg?.percent ?? 0))}%` }} />
                                             </div>
-                                            <div className="mt-1 text-xs text-gray-500">
-                                                {activeAgg?.completedLessons ??
-                                                    0}{" "}
-                                                / {activeAgg?.totalLessons ?? 0}{" "}
-                                                уроків завершено
+                                            <div className="mt-2 text-[11px] text-gray-500 tracking-wide">
+                                                {activeAgg?.completedLessons ?? 0} / {activeAgg?.totalLessons ?? 0} уроків завершено
                                             </div>
                                             {activeUnits?.length > 0 && (
-                                                <div className="mt-3 flex flex-wrap gap-2">
-                                                    {activeUnits.map((u) => (
-                                                        <span
-                                                            key={u.id}
-                                                            title={`${u.completed} / ${u.total}`}
-                                                            className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ring-1 ${
-                                                                u.percent ===
-                                                                100
-                                                                    ? "bg-green-50 text-green-700 ring-green-200"
-                                                                    : "bg-gray-50 text-gray-700 ring-gray-200"
-                                                            }`}
-                                                        >
-                                                            <span className="truncate max-w-[10rem]">
-                                                                {u.title}
-                                                            </span>
-                                                            <span className="opacity-70">
-                                                                {u.percent}%
-                                                            </span>
+                                                <div className="mt-4 flex flex-wrap gap-2">
+                                                    {activeUnits.map(u => (
+                                                        <span key={u.id} className={`badge-pill ${u.percent === 100 ? 'brand' : 'accent'} !px-3 !py-1`}> 
+                                                            <span className="truncate max-w-[7rem]">{u.title}</span>
+                                                            <span className="opacity-70">{u.percent}%</span>
                                                         </span>
                                                     ))}
                                                 </div>
                                             )}
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-3">
-                                        <button
-                                            onClick={handleContinue}
-                                            className="rounded-full bg-green-500 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                                        >
+                                    <div className="flex items-center gap-4 shrink-0">
+                                        <button onClick={handleContinue} className="inline-flex items-center gap-2 rounded-full bg-brand-600 hover:bg-brand-700 text-white px-6 py-2 text-sm font-semibold shadow-soft-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2">
                                             Продовжити
                                         </button>
-                                        <Link
-                                            href="/courses"
-                                            className="rounded-full bg-white px-5 py-2 text-sm font-semibold text-green-600 ring-1 ring-inset ring-green-300 hover:bg-green-50"
-                                        >
+                                        <Link href="/courses" className="inline-flex items-center gap-2 rounded-full bg-white text-brand-600 px-6 py-2 text-sm font-semibold border border-brand-300 hover:bg-brand-50">
                                             Курси
                                         </Link>
                                     </div>
                                 </div>
-                            </div>
+                            </section>
 
                             {/* In Progress Courses */}
                             {inProgressCourses.length > 0 && (
-                                <div
-                                    id="dash-in-progress"
-                                    className={`overflow-hidden sm:rounded-2xl bg-white shadow-sm ring-1 ring-gray-100 mb-6 transition-all duration-500 delay-150 ${
-                                        mounted
-                                            ? "opacity-100 translate-y-0"
-                                            : "opacity-0 translate-y-2"
-                                    }`}
-                                >
-                                    <div className="p-6 text-gray-900">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h3 className="text-lg font-semibold">
-                                                Продовжити навчання
-                                            </h3>
-                                            <Link
-                                                href="/progress"
-                                                className="text-blue-600 hover:text-blue-800 text-sm"
-                                            >
-                                                Переглянути прогрес →
-                                            </Link>
+                                <section id="dash-in-progress" className={`ui-card mb-8 transition-all duration-500 delay-100 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+                                    <div className="p-6 md:p-8">
+                                        <div className="flex justify-between items-center mb-6">
+                                            <h3 className="text-lg font-semibold text-gray-800">Продовжити навчання</h3>
+                                            <Link href="/progress" className="text-brand-600 hover:text-brand-700 text-sm font-medium">Переглянути прогрес →</Link>
                                         </div>
-
-                                        <div className="space-y-4">
-                                            {inProgressCourses.map((course) => (
-                                                <Progress.CourseProgress
-                                                    key={course.course_id}
-                                                    courseProgress={course}
-                                                />
+                                        <div className="space-y-5">
+                                            {inProgressCourses.map(course => (
+                                                <Progress.CourseProgress key={course.course_id} courseProgress={course} />
                                             ))}
                                         </div>
                                     </div>
-                                </div>
+                                </section>
                             )}
 
                             {/* Recent Courses */}
                             {recentCourses.length > 0 && (
-                                <div
-                                    id="dash-recent"
-                                    className={`overflow-hidden sm:rounded-2xl bg-white shadow-sm ring-1 ring-gray-100 transition-all duration-500 delay-200 ${
-                                        mounted
-                                            ? "opacity-100 translate-y-0"
-                                            : "opacity-0 translate-y-2"
-                                    }`}
-                                >
-                                    <div className="p-6 text-gray-900">
-                                        <div className="flex justify-between items-center mb-4">
-                                            <h3 className="text-lg font-semibold">
-                                                Нещодавні курси
-                                            </h3>
-                                            <Link
-                                                href="/courses"
-                                                className="text-blue-600 hover:text-blue-800 text-sm"
-                                            >
-                                                Усі курси →
-                                            </Link>
+                                <section id="dash-recent" className={`ui-card transition-all duration-500 delay-150 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+                                    <div className="p-6 md:p-8">
+                                        <div className="flex justify-between items-center mb-6">
+                                            <h3 className="text-lg font-semibold text-gray-800">Нещодавні курси</h3>
+                                            <Link href="/courses" className="text-brand-600 hover:text-brand-700 text-sm font-medium">Усі курси →</Link>
                                         </div>
-
-                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                            {recentCourses.map((course) => (
-                                                <div
-                                                    key={course.id}
-                                                    className="course-card-wrapper"
-                                                    onClick={() =>
-                                                        handleCourseSelect(
-                                                            course
-                                                        )
-                                                    }
-                                                >
-                                                    <Courses.CourseCard
-                                                        course={course}
-                                                    />
-                                                </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            {recentCourses.map(course => (
+                                                <button key={course.id} onClick={() => handleCourseSelect(course)} className="text-left group rounded-2xl bg-white border border-border-subtle hover:border-brand-300 shadow-sm hover:shadow-card transition overflow-hidden">
+                                                    <Courses.CourseCard course={course} />
+                                                </button>
                                             ))}
                                         </div>
                                     </div>
-                                </div>
+                                </section>
                             )}
 
                             {/* Empty state */}
                             {inProgressCourses.length === 0 &&
                                 recentCourses.length === 0 && (
-                                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
-                                        <div className="p-6 text-gray-900 text-center">
-                                            <h3 className="text-lg font-semibold mb-2">
-                                                Почнімо навчання
-                                            </h3>
-                                            <p className="text-gray-600 mb-4">
-                                                Обери курс і почни перший урок.
-                                            </p>
-                                            <Link
-                                                href="/courses"
-                                                className="inline-flex items-center px-4 py-2 bg-gray-800 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-gray-700 focus:bg-gray-700 active:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition ease-in-out duration-150"
-                                            >
-                                                Переглянути курси
-                                            </Link>
-                                        </div>
-                                    </div>
+                                    <section className="ui-card text-center py-16 mb-8">
+                                        <h3 className="text-xl font-semibold mb-3 text-gray-800">Почнімо навчання</h3>
+                                        <p className="text-gray-500 mb-6 max-w-md mx-auto">Обери курс і почни перший урок просто зараз.</p>
+                                        <Link href="/courses" className="inline-flex items-center gap-2 rounded-full bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 text-sm font-semibold shadow-soft-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2">
+                                            Переглянути курси
+                                        </Link>
+                                    </section>
                                 )}
                         </>
                     )}

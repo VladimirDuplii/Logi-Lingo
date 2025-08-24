@@ -3,3 +3,45 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* MagicPatterns animation keyframes (subset) */
+@keyframes bounce-small { 0%,100% { transform: translateY(0);} 50% { transform: translateY(-5px);} }
+@keyframes glow { 0%,100% { opacity:.5;} 50% { opacity:1;} }
+@keyframes pulse-slow { 0%,100% { opacity:1;} 50% { opacity:.7;} }
+
+.animate-bounce-small { animation: bounce-small 2s infinite ease-in-out; }
+.animate-glow { animation: glow 2s infinite ease-in-out; }
+.animate-pulse-slow { animation: pulse-slow 2s infinite ease-in-out; }
+
+/* Design tokens (CSS variables) */
+:root {
+	--color-bg: theme('colors.surface.soft');
+	--color-bg-alt: theme('colors.surface.alt');
+	--color-bg-card: theme('colors.surface.base');
+	--color-border: theme('colors.border.subtle');
+	--color-border-strong: theme('colors.border.strong');
+	--color-brand: theme('colors.brand.500');
+	--color-brand-accent: theme('colors.accent.500');
+	--color-text: #1E1B2E;
+	--radius-card: 1.25rem;
+	--shadow-card: 0 2px 4px -2px rgba(0,0,0,0.04), 0 8px 24px -4px rgba(99,102,241,0.08);
+}
+
+body { font-family: theme('fontFamily.sans'); background: var(--color-bg); color: var(--color-text); }
+
+/* Card styles */
+.ui-card { position:relative; background:#fff; border-radius:1.25rem; border:1px solid var(--color-border); box-shadow:var(--shadow-card); transition:all .3s; }
+.ui-card:hover { box-shadow:0 4px 16px -2px rgba(99,102,241,0.08),0 2px 6px -1px rgba(99,102,241,0.06); }
+.ui-card--gradient { background: linear-gradient(135deg,#ffffff 0%,#f5f3ff 80%); }
+
+/* Header badge */
+.badge-pill { display:inline-flex; align-items:center; gap:.5rem; border-radius:9999px; padding:.25rem .75rem; font-size:.75rem; font-weight:600; line-height:1; position:relative; }
+.badge-pill.brand { background:#eef2ff; color:#6366f1; box-shadow:0 0 0 1px #c7d2fe inset; }
+.badge-pill.accent { background:#ecfdf5; color:#059669; box-shadow:0 0 0 1px #a7f3d0 inset; }
+
+/* Progress bar */
+.progress-track { width:100%; height:8px; background:#c7d2fe; border-radius:9999px; overflow:hidden; }
+.progress-fill { height:100%; background:#6366f1; transition:width .5s; }
+
+/* Gradient text helper */
+.text-gradient-brand { background: linear-gradient(90deg,#6366f1,#8b5cf6,#ec4899); -webkit-background-clip:text; background-clip:text; color:transparent; }
