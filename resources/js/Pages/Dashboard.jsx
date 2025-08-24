@@ -3,8 +3,9 @@ import { Head, Link } from "@inertiajs/react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import DuoLayout from "@/Layouts/DuoLayout";
 import { setAuthToken } from "@/Services/ApiService";
-import { Card } from '@/Components/UI/Card';
-import { Button } from '@/Components/UI/Button';
+// Use existing UI primitives (lowercase file names)
+import { Card } from '@/Components/UI/card';
+import { Button } from '@/Components/UI/button';
 import { Headline } from '@/Components/UI/Headline';
 import { CourseService, ProgressService } from "@/Services";
 import { Courses, Progress } from "@/Components";
