@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { CourseService } from '../../Services';
 import CourseCard from './CourseCard';
-import { Headline } from '@/Components/ui';
+import { Headline, CourseCardSkeleton } from '@/Components/ui';
 
 const CourseList = ({ onCourseSelect }) => {
     const [courses, setCourses] = useState([]);
@@ -39,10 +39,8 @@ const CourseList = ({ onCourseSelect }) => {
 
     if (loading) {
         return (
-            <div className="grid grid-cols-1 gap-5">
-                {[1,2,3,4,5,6].map(i => (
-                    <div key={i} className="h-48 animate-pulse rounded-2xl bg-white ring-1 ring-gray-100 shadow-sm" />
-                ))}
+            <div className="grid grid-cols-1 gap-5" aria-label="Завантаження курсів" aria-busy="true">
+                {[...Array(6)].map((_,i)=>(<CourseCardSkeleton key={i} />))}
             </div>
         );
     }
