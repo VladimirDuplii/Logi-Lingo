@@ -7,6 +7,7 @@ import { setAuthToken } from "@/Services/ApiService";
 import { Card } from '@/Components/UI/card';
 import { Button } from '@/Components/UI/button';
 import { Headline } from '@/Components/UI/Headline';
+import { ProgressBar } from '@/Components/ui';
 import { CourseService, ProgressService } from "@/Services";
 import { Courses, Progress } from "@/Components";
 import { useToast } from "@/Components/Toast";
@@ -321,9 +322,7 @@ export default function Dashboard({ auth }) {
                                                 <span>Прогрес</span>
                                                 <span>{activeAgg?.percent ?? 0}%</span>
                                             </div>
-                                            <div className="progress-track">
-                                                <div className="progress-fill" style={{ width: `${Math.min(100, Math.max(0, activeAgg?.percent ?? 0))}%` }} />
-                                            </div>
+                                            <ProgressBar value={activeAgg?.percent ?? 0} />
                                             <div className="mt-2 text-[11px] text-gray-500 tracking-wide">
                                                 {activeAgg?.completedLessons ?? 0} / {activeAgg?.totalLessons ?? 0} уроків завершено
                                             </div>
