@@ -45,3 +45,8 @@ body { font-family: theme('fontFamily.sans'); background: var(--color-bg); color
 
 /* Gradient text helper */
 .text-gradient-brand { background: linear-gradient(90deg,#6366f1,#8b5cf6,#ec4899); -webkit-background-clip:text; background-clip:text; color:transparent; }
+
+/* Clean Card primitive (for refactored design system) */
+.ui-card-clean { background:var(--_card-bg,#fff); border:1px solid var(--_card-border,#E5E3F3); border-radius:var(--_card-radius,1.25rem); box-shadow:var(--_card-shadow,0 2px 4px rgba(0,0,0,0.04)); position:relative; transition:box-shadow .35s, transform .35s, background-color .35s; }
+.ui-card-clean:hover { box-shadow:var(--_card-shadow-hover,0 6px 28px -6px rgba(99,102,241,0.15)); }
+.ui-card-inset { background:linear-gradient(#ffffff,#fbfaff); }

@@ -3,6 +3,9 @@ import { Head, Link } from "@inertiajs/react";
 import AuthenticatedLayout from "@/Layouts/AuthenticatedLayout";
 import DuoLayout from "@/Layouts/DuoLayout";
 import { setAuthToken } from "@/Services/ApiService";
+import { Card } from '@/Components/UI/Card';
+import { Button } from '@/Components/UI/Button';
+import { Headline } from '@/Components/UI/Headline';
 import { CourseService, ProgressService } from "@/Services";
 import { Courses, Progress } from "@/Components";
 import { useToast } from "@/Components/Toast";
@@ -274,8 +277,8 @@ export default function Dashboard({ auth }) {
                     ) : (
                         <>
                             {/* Duo-style header: avatar, hearts, points */}
-                            <section id="dash-header" className={`ui-card mb-8 overflow-hidden transition-all duration-500 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}>
-                                <div className="p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+                            <Card id="dash-header" className={`mb-8 overflow-hidden transition-all duration-500 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}>
+                                <div className="p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-8">
                                     <div className="flex items-center gap-5">
                                         <div className="h-14 w-14 rounded-2xl bg-brand-gradient text-white text-xl font-bold flex items-center justify-center shadow-soft-lg">
                                             {auth?.user?.name?.charAt(0) || "U"}
@@ -298,21 +301,17 @@ export default function Dashboard({ auth }) {
                                             ))}
                                         </div>
                                         {canRefill && (
-                                            <button
-                                                onClick={handleRefill}
-                                                disabled={refilling}
-                                                className={`inline-flex items-center gap-2 rounded-full bg-emerald-500 hover:bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 ${refilling ? "opacity-70 cursor-not-allowed" : ""}`}
-                                            >
-                                                {refilling ? "Виконується…" : "Відновити життя -50 ⚡"}
-                                            </button>
+                                            <Button onClick={handleRefill} disabled={refilling} className={refilling ? 'opacity-70 cursor-not-allowed' : ''}>
+                                                {refilling ? 'Виконується…' : 'Відновити життя -50 ⚡'}
+                                            </Button>
                                         )}
                                     </div>
                                 </div>
-                            </section>
+                            </Card>
 
                             {/* Continue card */}
-                            <section id="dash-continue" className={`ui-card mb-8 transition-all duration-500 delay-75 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}>
-                                <div className="p-6 md:p-8 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+                            <Card id="dash-continue" className={`mb-8 transition-all duration-500 delay-75 ${mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"}`}>
+                                <div className="p-6 md:p-8 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-10">
                                     <div className="flex-1 min-w-0">
                                         <p className="text-xs font-medium tracking-wide text-brand-600 mb-2 uppercase">Активний курс</p>
                                         <h2 className="text-xl font-semibold text-gray-800 truncate">{activeCourseTitle}</h2>
@@ -340,22 +339,18 @@ export default function Dashboard({ auth }) {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-4 shrink-0">
-                                        <button onClick={handleContinue} className="inline-flex items-center gap-2 rounded-full bg-brand-600 hover:bg-brand-700 text-white px-6 py-2 text-sm font-semibold shadow-soft-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2">
-                                            Продовжити
-                                        </button>
-                                        <Link href="/courses" className="inline-flex items-center gap-2 rounded-full bg-white text-brand-600 px-6 py-2 text-sm font-semibold border border-brand-300 hover:bg-brand-50">
-                                            Курси
-                                        </Link>
+                                        <Button onClick={handleContinue}>Продовжити</Button>
+                                        <Link href="/courses" className="relative inline-flex items-center gap-2 font-medium rounded-full border border-brand-300 hover:border-brand-400 bg-white text-brand-600 px-6 py-2 text-sm transition-colors">Курси</Link>
                                     </div>
                                 </div>
-                            </section>
+                            </Card>
 
                             {/* In Progress Courses */}
                             {inProgressCourses.length > 0 && (
-                                <section id="dash-in-progress" className={`ui-card mb-8 transition-all duration-500 delay-100 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+                                <Card id="dash-in-progress" className={`mb-8 transition-all duration-500 delay-100 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
                                     <div className="p-6 md:p-8">
                                         <div className="flex justify-between items-center mb-6">
-                                            <h3 className="text-lg font-semibold text-gray-800">Продовжити навчання</h3>
+                                            <Headline level={3}>Продовжити навчання</Headline>
                                             <Link href="/progress" className="text-brand-600 hover:text-brand-700 text-sm font-medium">Переглянути прогрес →</Link>
                                         </div>
                                         <div className="space-y-5">
@@ -364,15 +359,15 @@ export default function Dashboard({ auth }) {
                                             ))}
                                         </div>
                                     </div>
-                                </section>
+                                </Card>
                             )}
 
                             {/* Recent Courses */}
                             {recentCourses.length > 0 && (
-                                <section id="dash-recent" className={`ui-card transition-all duration-500 delay-150 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
+                                <Card id="dash-recent" className={`transition-all duration-500 delay-150 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2'}`}>
                                     <div className="p-6 md:p-8">
                                         <div className="flex justify-between items-center mb-6">
-                                            <h3 className="text-lg font-semibold text-gray-800">Нещодавні курси</h3>
+                                            <Headline level={3}>Нещодавні курси</Headline>
                                             <Link href="/courses" className="text-brand-600 hover:text-brand-700 text-sm font-medium">Усі курси →</Link>
                                         </div>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -383,19 +378,17 @@ export default function Dashboard({ auth }) {
                                             ))}
                                         </div>
                                     </div>
-                                </section>
+                                </Card>
                             )}
 
                             {/* Empty state */}
                             {inProgressCourses.length === 0 &&
                                 recentCourses.length === 0 && (
-                                    <section className="ui-card text-center py-16 mb-8">
-                                        <h3 className="text-xl font-semibold mb-3 text-gray-800">Почнімо навчання</h3>
+                                    <Card className="text-center py-16 mb-8">
+                                        <Headline level={3} className="mb-2">Почнімо навчання</Headline>
                                         <p className="text-gray-500 mb-6 max-w-md mx-auto">Обери курс і почни перший урок просто зараз.</p>
-                                        <Link href="/courses" className="inline-flex items-center gap-2 rounded-full bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 text-sm font-semibold shadow-soft-lg focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2">
-                                            Переглянути курси
-                                        </Link>
-                                    </section>
+                                        <Button onClick={() => (window.location.href='/courses')}>Переглянути курси</Button>
+                                    </Card>
                                 )}
                         </>
                     )}
