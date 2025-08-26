@@ -13,8 +13,12 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // Guard: prevent seeding in non-local environments (skip on staging/production)
+        if (!app()->environment('local')) {
+            return; // Safe no-op outside local dev
+        }
 
+        // User::factory(10)->create();
         if (!User::where('email', 'test@example.com')->exists()) {
             User::factory()->create([
                 'name' => 'Test User',
@@ -22,14 +26,14 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        // Запускаємо наші сідери для курсів, розділів та уроків
+        // Local development seeders for courses, units, lessons & challenges
         $this->call([
             CourseSeeder::class,
             UnitSeeder::class,
             LessonSeeder::class,
             LogicLessonsSeeder::class,
             LogicChallengesSeeder::class,
-                // Run cleanup at the end to merge any duplicates created previously
+            // Cleanup duplicates from earlier iterations
             CleanupDuplicateLessonsSeeder::class,
         ]);
     }
