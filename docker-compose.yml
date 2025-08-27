@@ -28,7 +28,8 @@ services:
             # Increase upload/import limits if needed
             UPLOAD_LIMIT: 64M
         ports:
-            - '8081:80'
+            # Configurable external port (default 8082 if PHPMYADMIN_PORT not set)
+            - '${PHPMYADMIN_PORT:-8082}:80'
         networks:
             - logiclingo
         healthcheck:
